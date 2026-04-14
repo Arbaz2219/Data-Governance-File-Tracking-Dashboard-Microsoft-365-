@@ -5,8 +5,10 @@ import { msalInstance } from "./authConfig";
 import './index.css'
 import App from './App.jsx'
 
-// Ensure MSAL is initialized before the app renders
+// Ensure MSAL is initialized and redirects are processed before the app renders
 msalInstance.initialize().then(() => {
+  return msalInstance.handleRedirectPromise();
+}).then(() => {
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <MsalProvider instance={msalInstance}>
@@ -14,4 +16,6 @@ msalInstance.initialize().then(() => {
       </MsalProvider>
     </StrictMode>,
   );
+}).catch(err => {
+    console.error("MSAL Redirect Processing Error:", err);
 });
