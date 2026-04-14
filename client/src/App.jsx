@@ -90,9 +90,9 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
   const formatNJTime = (creationTime) => {
     if (!creationTime) return "N/A";
     const date = new Date(creationTime);
-    // Format: 4/14/2026 time 1:21 pm
-    const dateStr = date.toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric' });
-    const timeStr = date.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    // Format using Browser Local Time
+    const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
     return `${dateStr} time ${timeStr}`;
   };
 
