@@ -210,8 +210,7 @@ function App() {
 
   const AUTHORIZED_EMAILS = [
     'kundan@ldplogistics.com',
-    'help-desk@ldplogistics.com', // Original user
-    accounts[0]?.username?.toLowerCase()
+    'help-desk@ldplogistics.com'
   ];
 
   const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
@@ -300,6 +299,17 @@ function App() {
       }
     } catch (err) { console.error("Web fetch error:", err); }
   };
+
+  const filteredWebActivity = useMemo(() => {
+    if (!webActivity || webActivity.length === 0) return [];
+    if (!searchTerm) return webActivity;
+    const term = searchTerm.toLowerCase();
+    return webActivity.filter(log => 
+      log.DeviceName?.toLowerCase().includes(term) || 
+      log.RemoteUrl?.toLowerCase().includes(term) || 
+      log.InitiatingProcessAccountName?.toLowerCase().includes(term)
+    );
+  }, [webActivity, searchTerm]);
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -465,7 +475,7 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {webActivity.length > 0 ? webActivity.map((log, idx) => (
+                      {filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
                         <tr key={idx}>
                           <td style={{ color: '#8892b0' }}>{formatNJTime(log.Timestamp)}</td>
                           <td style={{ color: '#00f3ff', fontWeight: '600' }}>{log.DeviceName}</td>
