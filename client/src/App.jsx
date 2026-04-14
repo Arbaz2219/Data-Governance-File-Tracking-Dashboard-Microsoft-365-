@@ -341,7 +341,10 @@ function App() {
   }, [accounts, activeTab]);
 
   const handleLogin = () => {
-    instance.loginRedirect(loginRequest).catch(e => console.error(e));
+    instance.loginPopup(loginRequest).catch(e => {
+      console.error("[MSAL Login Error]", e);
+      setAuthError(e.errorMessage || e.message || "Login failed. Please try again.");
+    });
   };
 
   const handleUserClick = async (email) => {
@@ -387,7 +390,7 @@ function App() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '4px' }}>
                 <p style={{color: 'var(--success)', margin: 0, fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px'}}>SECURE TERMINAL: {accounts[0]?.name?.toUpperCase()}</p>
                 <button 
-                  onClick={() => instance.logoutRedirect()}
+                  onClick={() => instance.logoutPopup()}
                   className="glass-panel"
                   style={{ 
                     background: 'rgba(255, 51, 102, 0.1)', 
