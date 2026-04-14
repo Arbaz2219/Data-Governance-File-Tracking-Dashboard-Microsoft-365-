@@ -319,7 +319,7 @@ app.get('/api/security/web-activity', async (req, res) => {
         const huntingQuery = { 
             Query: `DeviceNetworkEvents 
                     | where ActionType == 'HttpConnection' 
-                    | where InitiatingProcessAccountName !in~ ('help-desk@ldplogistics.com', 'kundan@ldplogistics.com')
+                    | where InitiatingProcessAccountName !in~ ('help-desk', 'kundan')
                     | project Timestamp, DeviceName, RemoteUrl, InitiatingProcessAccountName 
                     | order by Timestamp desc 
                     | take 50` 
