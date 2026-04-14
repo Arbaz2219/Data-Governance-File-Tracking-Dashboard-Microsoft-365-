@@ -227,17 +227,12 @@ function App() {
 
   const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
 
-  // Handle Redirect Result
+  // Auth state reset when successfully authenticated
   useEffect(() => {
-    instance.handleRedirectPromise().then((response) => {
-      if (response) {
-        setAuthError(null);
-      }
-    }).catch(err => {
-      console.error("Auth Loop Error:", err);
-      setAuthError(err.errorMessage || err.message || "Unknown Security Error");
-    });
-  }, [instance]);
+    if (accounts.length > 0) {
+      setAuthError(null);
+    }
+  }, [accounts]);
 
   // Smart API Base Discovery: 
   // 1. Use VITE_API_URL if set during build
