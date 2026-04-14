@@ -10,8 +10,8 @@ export const msalConfig = {
         navigateToLoginRequestUrl: false,
     },
     cache: {
-        cacheLocation: "localStorage", // Better persistence
-        storeAuthStateInCookie: true, // Helps with some IE/browser issues
+        cacheLocation: "sessionStorage", // Prevents state_mismatch errors
+        storeAuthStateInCookie: false,
     },
     system: {
         loggerOptions: {
