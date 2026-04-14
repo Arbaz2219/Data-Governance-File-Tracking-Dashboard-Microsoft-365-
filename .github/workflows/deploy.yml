@@ -62,8 +62,8 @@ jobs:
             echo "CLEANING: Stopping and removing old containers..."
             sudo docker compose --env-file .env.prod down
 
-            echo "CLEANING: Pruning old images to force new pull..."
-            sudo docker image prune -a -f
+            echo "CLEANING: Pruning everything to force clean layers..."
+            sudo docker system prune -f
 
             echo "PULLING: Fetching latest images from Hub..."
             sudo docker compose --env-file .env.prod pull
