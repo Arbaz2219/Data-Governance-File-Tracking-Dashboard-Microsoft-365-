@@ -1,6 +1,6 @@
 services:
   backend:
-    build: .
+    image: ${BACKEND_IMAGE}
     restart: unless-stopped
     env_file:
       - .env.prod
@@ -28,10 +28,7 @@ services:
       - "traefik.http.services.backend-${PROJECT_NAME}.loadbalancer.server.port=3001"
 
   frontend:
-    build: 
-      context: ./client
-      args:
-        - VITE_API_URL=https://${BACKEND_DOMAIN}
+    image: ${FRONTEND_IMAGE}
     restart: unless-stopped
     networks:
       - traefik_public
@@ -51,24 +48,8 @@ services:
       # Service Port
       - "traefik.http.services.frontend-${PROJECT_NAME}.loadbalancer.server.port=80"
 
-  db:
-    image: postgres:17-alpine
-    env_file:
-      - .env.prod
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    networks:
-      - backend
-
 volumes:
   audit_data:
-    driver: local
-  postgres_data:
     driver: local
 
 networks:

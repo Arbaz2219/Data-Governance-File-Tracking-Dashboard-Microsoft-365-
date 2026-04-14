@@ -6,7 +6,23 @@ import { useMsal, AuthenticatedTemplate, UnauthenticatedTemplate } from "@azure/
 import { loginRequest } from "./authConfig";
 import './App.css';
 
-// OPTIMIZED CHART COMPONENT
+const SystemClock = () => {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const dateStr = time.toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric' });
+    const timeStr = time.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: '#00f3ff', borderRight: '2px solid rgba(0, 243, 255, 0.3)', paddingRight: '15px', marginRight: '15px' }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: '800', letterSpacing: '1px' }}>{timeStr}</span>
+            <span style={{ fontSize: '0.7rem', color: '#8892b0', textTransform: 'uppercase' }}>{dateStr} (NY/NJ TIME)</span>
+        </div>
+    );
+};
 const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
   return (
     <div className="charts-grid">
@@ -62,7 +78,7 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
   );
 });
 
-const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData, activityData }) => {
+const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData, activityData, searchTerm }) => {
   // Compute Metrics
   const metrics = useMemo(() => {
     if (!data || data.length === 0) return { total: 0, users: 0, shared: 0 };
@@ -74,18 +90,27 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
   const formatNJTime = (creationTime) => {
     if (!creationTime) return "N/A";
     const date = new Date(creationTime);
-    return date.toLocaleString('en-US', { 
-        timeZone: 'America/New_York', 
-        year: 'numeric', month: '2-digit', day: '2-digit', 
-        hour: '2-digit', minute: '2-digit', second: '2-digit', 
-        hour12: true 
-    }).replace(',', '') + " EST";
+    // Format: 4/14/2026 time 1:21 pm
+    const dateStr = date.toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    return `${dateStr} time ${timeStr}`;
   };
 
   const liveFeedData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    const sorted = [...data].sort((a,b) => new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime());
-    return sorted.filter(d => !d.UserId?.includes('app@sharepoint')).slice(0, 50).map(event => {
+    let processed = [...data].sort((a,b) => new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime());
+    
+    // Search Filter
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        processed = processed.filter(d => 
+            d.UserId?.toLowerCase().includes(term) || 
+            d.ObjectId?.toLowerCase().includes(term) || 
+            d.Operation?.toLowerCase().includes(term)
+        );
+    }
+
+    return processed.filter(d => !d.UserId?.includes('app@sharepoint')).slice(0, 50).map(event => {
       let filename = event.ObjectId?.split('/').pop();
       try { filename = decodeURIComponent(filename); } catch (e) {}
       if (!filename || filename.includes('http')) filename = 'Folder / System Item';
@@ -179,10 +204,17 @@ function App() {
   const [authError, setAuthError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [fullProfile, setFullProfile] = useState(null);
-  const [devices, setDevices] = useState([]);
-  const [allDevices, setAllDevices] = useState([]);
   const [webActivity, setWebActivity] = useState([]);
-  const [activeTab, setActiveTab] = useState('feed'); // feed, fleet, web
+  const [activeTab, setActiveTab] = useState('feed'); // feed, web
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const AUTHORIZED_EMAILS = [
+    'kundan@ldplogistics.com',
+    'help-desk@ldplogistics.com', // Original user
+    accounts[0]?.username?.toLowerCase()
+  ];
+
+  const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
 
   // Handle Redirect Result
   useEffect(() => {
@@ -212,15 +244,6 @@ function App() {
     }
   };
 
-  const fetchAllDevices = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/devices/all`);
-      if (response.ok) {
-        const json = await response.json();
-        setAllDevices(json);
-      }
-    } catch (err) { console.error("Fleet fetch error:", err); }
-  };
 
   // Compute Sankey Data
   const sankeyData = useMemo(() => {
@@ -281,11 +304,9 @@ function App() {
   useEffect(() => {
     if (accounts.length > 0) {
       fetchData();
-      fetchAllDevices();
       fetchWebActivity();
       const interval = setInterval(() => {
         fetchData();
-        if (activeTab === 'fleet') fetchAllDevices();
         if (activeTab === 'web') fetchWebActivity();
       }, 3000); 
       return () => clearInterval(interval);
@@ -301,20 +322,12 @@ function App() {
     let fullEmail = email.includes('@') ? email : `${email}@ldplogistics.com`;
     setSelectedUser(fullEmail);
     setFullProfile(null);
-    setDevices([]); 
     try {
         // Fetch Profile & Stats
         const profileResponse = await fetch(`${API_BASE}/api/user/${fullEmail}/profile`);
         if(!profileResponse.ok) throw new Error();
         const profileData = await profileResponse.json();
         setFullProfile(profileData);
-
-        // Fetch Managed Devices (Intune)
-        const devicesResponse = await fetch(`${API_BASE}/api/user/${fullEmail}/devices`);
-        if(devicesResponse.ok) {
-           const devicesData = await devicesResponse.json();
-           setDevices(devicesData);
-        }
     } catch(e) {
         setFullProfile({ error: true });
     }
@@ -339,249 +352,205 @@ function App() {
   return (
     <div className="dashboard-container">
       <AuthenticatedTemplate>
-        <header className="header">
-          <div>
-            <h1>Data Governance File Tracking Dashboard</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '8px' }}>
-              <p style={{color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem'}}>System Administrator: <b>{accounts[0]?.username}</b></p>
-              <button 
-                onClick={() => instance.logoutRedirect()}
-                style={{ 
-                  background: 'rgba(255, 255, 255, 0.05)', 
-                  border: '1px solid rgba(255, 255, 255, 0.1)', 
-                  color: '#8892b0', 
-                  fontSize: '0.75rem', 
-                  padding: '4px 12px', 
-                  borderRadius: '15px',
-                  cursor: 'pointer'
-                }}
-              >
-                Sign Out
-              </button>
+        <header className="header" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <SystemClock />
+            <div>
+              <h1>Data Governance Dashboard Pro</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '4px' }}>
+                <p style={{color: '#00ff88', margin: 0, fontSize: '0.8rem', fontWeight: 'bold'}}>ADMIN ACCESS: {accounts[0]?.name}</p>
+                <button 
+                  onClick={() => instance.logoutRedirect()}
+                  style={{ 
+                    background: 'rgba(255, 77, 77, 0.15)', 
+                    border: '1px solid #ff4d4d', 
+                    color: '#ff4d4d', 
+                    fontSize: '0.7rem', 
+                    padding: '2px 10px', 
+                    borderRadius: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
-          <div style={{ color: "#00ff88", display: "flex", alignItems: "center", gap: "10px", fontSize: '0.85rem', fontWeight: "700" }}>
-              <span className="live-dot"></span>
-              REAL-TIME SECURITY FEED ACTIVE
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div className="search-wrapper" style={{ position: 'relative' }}>
+                <input 
+                  type="text" 
+                  placeholder="Search file, user or action..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    padding: '10px 15px',
+                    borderRadius: '20px',
+                    color: '#fff',
+                    width: '300px',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    transition: 'all 0.3s'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#00f3ff'}
+                  onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                />
+              </div>
+              <div style={{ color: "#00ff88", display: "flex", alignItems: "center", gap: "10px", fontSize: '0.85rem', fontWeight: "700" }}>
+                  <span className="live-dot"></span>
+                  LIVE FEED ACTIVE
+              </div>
           </div>
         </header>
 
-        {/* TAB NAVIGATION */}
-        <div className="glass-panel" style={{ display: 'flex', gap: '5px', padding: '5px', marginBottom: '2rem', width: 'fit-content' }}>
-          <button 
-            onClick={() => setActiveTab('feed')}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              background: activeTab === 'feed' ? 'rgba(0, 243, 255, 0.15)' : 'transparent',
-              color: activeTab === 'feed' ? '#00f3ff' : '#8892b0',
-              fontWeight: 600
-            }}
-          >
-            <Activity size={18} /> File Activity Feed
-          </button>
-          <button 
-            onClick={() => setActiveTab('fleet')}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              background: activeTab === 'fleet' ? 'rgba(255, 0, 243, 0.15)' : 'transparent',
-              color: activeTab === 'fleet' ? '#ff00f3' : '#8892b0',
-              fontWeight: 600
-            }}
-          >
-            <Laptop size={18} /> Corporate Fleet (All Devices)
-          </button>
-          <button 
-            onClick={() => setActiveTab('web')}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              background: activeTab === 'web' ? 'rgba(0, 255, 136, 0.15)' : 'transparent',
-              color: activeTab === 'web' ? '#00ff88' : '#8892b0',
-              fontWeight: 600
-            }}
-          >
-            <Globe size={18} /> Web & Browser Tracking
-          </button>
-        </div>
-
-        {activeTab === 'feed' && (
-          <DashboardContent 
-            data={data} 
-            error={error} 
-            handleUserClick={handleUserClick} 
-            sankeyData={sankeyData}
-            activityData={activityData}
-          />
-        )}
-
-        {activeTab === 'fleet' && (
-          <div className="glass-panel feed-panel" style={{ minHeight: '600px' }}>
-            <h2>Corporate Managed Fleet (Intune Control)</h2>
-            <div className="table-container">
-              <table className="feed-table">
-                <thead>
-                  <tr>
-                    <th>Device Name</th>
-                    <th>User / Owner</th>
-                    <th>Model</th>
-                    <th>Operating System</th>
-                    <th>Compliance</th>
-                    <th>Last Sync</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allDevices.map((device) => (
-                    <tr key={device.id}>
-                      <td style={{ color: '#00f3ff', fontWeight: '700' }}>{device.deviceName}</td>
-                      <td>
-                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                           <span style={{ color: '#fff' }}>{device.userDisplayName || 'Unassigned'}</span>
-                           <span style={{ fontSize: '0.75rem', color: '#8892b0' }}>{device.userPrincipalName}</span>
-                         </div>
-                      </td>
-                      <td>{device.model}</td>
-                      <td>{device.operatingSystem}</td>
-                      <td>
-                        <span style={{ color: device.complianceState === 'compliant' ? '#00ff88' : '#ff4d4d' }}>
-                          {device.complianceState?.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: '0.8rem', color: '#8892b0' }}>{new Date(device.lastSyncDateTime).toLocaleString('en-US', { timeZone: 'America/New_York'})}</td>
-                      <td>
-                         <button 
-                          onClick={() => handleReboot(device.id, device.deviceName)}
-                          style={{ background: 'rgba(255, 77, 77, 0.1)', color: '#ff4d4d', border: '1px solid #ff4d4d', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer' }}
-                        >
-                          Restart
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {!isAuthorized ? (
+          <div className="glass-panel" style={{ padding: '5rem', textAlign: 'center' }}>
+             <ShieldAlert size={64} color="#ff4d4d" style={{ marginBottom: '1.5rem' }} />
+             <h2 style={{ color: '#fff', fontSize: '2rem' }}>Access Denied</h2>
+             <p style={{ color: '#8892b0', margin: '1rem 0' }}>This terminal is restricted to authorized Security Personnel only.</p>
+             <p style={{ color: '#ff4d4d', fontWeight: 'bold' }}>Contact the Head of IT to request access for {accounts[0]?.username}.</p>
           </div>
-        )}
-
-        {activeTab === 'web' && (
-          <div className="glass-panel feed-panel" style={{ minHeight: '600px' }}>
-            <h2>Browser Search & History Tracking (Microsoft Defender)</h2>
-            <div className="table-container">
-              <table className="feed-table">
-                <thead>
-                  <tr>
-                    <th>Time (NJ EST)</th>
-                    <th>Device Name</th>
-                    <th>User / Account</th>
-                    <th>Accessed URL / Activity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {webActivity.length > 0 ? webActivity.map((log, idx) => (
-                    <tr key={idx}>
-                      <td style={{ color: '#8892b0' }}>{new Date(log.Timestamp).toLocaleString('en-US', { timeZone: 'America/New_York'})}</td>
-                      <td style={{ color: '#00f3ff', fontWeight: '600' }}>{log.DeviceName}</td>
-                      <td>{log.InitiatingProcessAccountName}</td>
-                      <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#00ff88' }}>
-                         {log.RemoteUrl || 'Internal / Local Process'}
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
-                         <div style={{ opacity: 0.5 }}>
-                           <Globe size={48} style={{ marginBottom: '1rem' }} />
-                           <p>No real-time web activity detected in the last 10 minutes.</p>
-                           <p style={{ fontSize: '0.8rem' }}>Browser searches from Chrome & Edge will appear here automatically.</p>
-                         </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+        ) : (
+          <>
+            <div className="glass-panel" style={{ display: 'flex', gap: '5px', padding: '5px', marginBottom: '2rem', width: 'fit-content' }}>
+              <button 
+                onClick={() => setActiveTab('feed')}
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  background: activeTab === 'feed' ? 'rgba(0, 243, 255, 0.15)' : 'transparent',
+                  color: activeTab === 'feed' ? '#00f3ff' : '#8892b0',
+                  fontWeight: 600
+                }}
+              >
+                <Activity size={18} /> File Activity Feed
+              </button>
+              <button 
+                onClick={() => setActiveTab('web')}
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  background: activeTab === 'web' ? 'rgba(0, 255, 136, 0.15)' : 'transparent',
+                  color: activeTab === 'web' ? '#00ff88' : '#8892b0',
+                  fontWeight: 600
+                }}
+              >
+                <Globe size={18} /> Web & Browser Tracking
+              </button>
             </div>
-          </div>
-        )}
 
+            {activeTab === 'feed' && (
+              <DashboardContent 
+                data={data} 
+                error={error} 
+                handleUserClick={handleUserClick} 
+                sankeyData={sankeyData}
+                activityData={activityData}
+                searchTerm={searchTerm}
+              />
+            )}
 
-        {selectedUser && (
-          <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
-            <div className="modal-content glass-panel profile-modal" onClick={e => e.stopPropagation()}>
-              <div className="profile-header">
-                <div className="profile-avatar"><UserIcon size={40} /></div>
-                <div className="profile-title-set">
-                  <h3>{fullProfile?.profile?.displayName || selectedUser.split('@')[0]}</h3>
-                  <p>{selectedUser}</p>
+            {activeTab === 'web' && (
+              <div className="glass-panel feed-panel" style={{ minHeight: '600px' }}>
+                <h2>Browser Search & History Tracking (Microsoft Defender)</h2>
+                <div className="table-container">
+                  <table className="feed-table">
+                    <thead>
+                      <tr>
+                        <th>Time (NJ EST)</th>
+                        <th>Device Name</th>
+                        <th>User / Account</th>
+                        <th>Accessed URL / Activity</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {webActivity.length > 0 ? webActivity.map((log, idx) => (
+                        <tr key={idx}>
+                          <td style={{ color: '#8892b0' }}>{formatNJTime(log.Timestamp)}</td>
+                          <td style={{ color: '#00f3ff', fontWeight: '600' }}>{log.DeviceName}</td>
+                          <td>{log.InitiatingProcessAccountName}</td>
+                          <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#00ff88' }}>
+                            {log.RemoteUrl || 'Internal / Local Process'}
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
+                            <div style={{ opacity: 0.5 }}>
+                              <Globe size={48} style={{ marginBottom: '1rem' }} />
+                              <p>No real-time web activity detected in the last 10 minutes.</p>
+                              <p style={{ fontSize: '0.8rem' }}>Browser searches from Chrome & Edge will appear here automatically.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              
-              <div className="profile-details-grid">
-                <div className="detail-item">
-                  <label>Department</label>
-                  <span>{fullProfile?.profile?.department || 'Not Specified'}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Job Title</label>
-                  <span>{fullProfile?.profile?.jobTitle || 'Unassigned'}</span>
+            )}
+
+            {selectedUser && (
+              <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
+                <div className="modal-content glass-panel profile-modal" onClick={e => e.stopPropagation()}>
+                  <div className="profile-header">
+                    <div className="profile-avatar"><UserIcon size={40} /></div>
+                    <div className="profile-title-set">
+                      <h3>{fullProfile?.profile?.displayName || selectedUser.split('@')[0]}</h3>
+                      <p>{selectedUser}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="profile-details-grid">
+                    <div className="detail-item">
+                      <label>Department</label>
+                      <span>{fullProfile?.profile?.department || 'Not Specified'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Job Title</label>
+                      <span>{fullProfile?.profile?.jobTitle || 'Unassigned'}</span>
+                    </div>
+                  </div>
+
+                  {fullProfile ? (
+                    fullProfile.error ? (
+                        <div className="error-box">
+                          <ShieldAlert size={20} />
+                          <p>Graph API Error: Access Denied. Verify "User.Read.All" & "Files.Read.All" permissions.</p>
+                        </div>
+                    ) : (
+                      <>
+                        <div className="stats-row">
+                          <div className="stat-pill">
+                            <Database size={16} />
+                            <span>{fullProfile.stats.uniqueFileCount} Unique Files Touched</span>
+                          </div>
+                          <div className="stat-pill">
+                            <Activity size={16} />
+                            <span>{fullProfile.stats.totalEvents} Total Activities</span>
+                          </div>
+                        </div>
+
+                        <div className="storage-box">
+                          <div className="storage-info">
+                            <h3>{(fullProfile.storage.used / 1073741824).toFixed(2)} GB</h3>
+                            <p>OneDrive Usage</p>
+                          </div>
+                          <div className="storage-bar-bg">
+                            <div className="storage-bar-fill" style={{ width: `${(fullProfile.storage.used / fullProfile.storage.total * 100)}%` }}></div>
+                          </div>
+                          <p className="storage-footer">Capacity: {(fullProfile.storage.total / 1073741824).toFixed(0)} GB</p>
+                        </div>
+                      </>
+                    )
+                  ) : <p className="loading-text">Mining Employee Intelligence Data...</p>}
+                  
+                  <button className="close-btn" onClick={() => setSelectedUser(null)}>Close Profile</button>
                 </div>
               </div>
-
-              {fullProfile ? (
-                 fullProfile.error ? (
-                    <div className="error-box">
-                      <ShieldAlert size={20} />
-                      <p>Graph API Error: Access Denied. Verify "User.Read.All" & "Files.Read.All" permissions.</p>
-                    </div>
-                 ) : (
-                   <>
-                    <div className="stats-row">
-                      <div className="stat-pill">
-                        <Database size={16} />
-                        <span>{fullProfile.stats.uniqueFileCount} Unique Files Touched</span>
-                      </div>
-                      <div className="stat-pill">
-                        <Activity size={16} />
-                        <span>{fullProfile.stats.totalEvents} Total Activities</span>
-                      </div>
-                    </div>
-
-                    <div className="storage-box">
-                      <div className="storage-info">
-                        <h3>{ (fullProfile.storage.used / 1073741824).toFixed(2) } GB</h3>
-                        <p>OneDrive Usage</p>
-                      </div>
-                      <div className="storage-bar-bg">
-                        <div className="storage-bar-fill" style={{ width: `${(fullProfile.storage.used / fullProfile.storage.total * 100)}%` }}></div>
-                      </div>
-                      <p className="storage-footer">Capacity: { (fullProfile.storage.total / 1073741824).toFixed(0) } GB</p>
-                    </div>
-
-                    <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-                       <label style={{ fontSize: '0.7rem', color: '#8892b0', textTransform: 'uppercase', letterSpacing: '1px' }}>System Management (Intune)</label>
-                       {devices.length > 0 ? (
-                         devices.map(device => (
-                           <div key={device.id} className="glass-panel" style={{ padding: '12px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderColor: 'rgba(255,0,0,0.2)' }}>
-                              <div>
-                                <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: '600' }}>{device.deviceName}</span>
-                                <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#8892b0' }}>{device.operatingSystem} ({device.complianceState})</p>
-                              </div>
-                              <button 
-                                onClick={() => handleReboot(device.id, device.deviceName)}
-                                style={{ background: '#ff4d4d', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                              >
-                                Restart
-                              </button>
-                           </div>
-                         ))
-                       ) : <p style={{ fontSize: '0.8rem', color: '#8892b0', marginTop: '10px' }}>No managed devices found for this user.</p>}
-                    </div>
-                   </>
-                 )
-              ) : <p className="loading-text">Mining Employee Intelligence Data...</p>}
-              
-              <button className="close-btn" onClick={() => setSelectedUser(null)}>Close Profile</button>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </AuthenticatedTemplate>
 

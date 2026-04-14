@@ -169,14 +169,16 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Expose the JSON file to frontend
+// Expose the JSON file to frontend (Optimized Slicing for Speed)
 app.get('/api/audit-logs', (req, res) => {
     if (fs.existsSync(OUTPUT_FILE)) {
         const rawData = fs.readFileSync(OUTPUT_FILE);
-        res.setHeader('Content-Type', 'application/json');
-        res.send(rawData);
+        const data = JSON.parse(rawData);
+        // Only return the latest 1000 records to ensure the dashboard feels instant
+        const slicedData = data.slice(-1000); 
+        res.json(slicedData);
     } else {
-        res.status(404).json({ error: "No data synced yet" });
+        res.json([]);
     }
 });
 
