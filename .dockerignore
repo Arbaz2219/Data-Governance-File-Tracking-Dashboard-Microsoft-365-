@@ -1,0 +1,9 @@
+node_modules
+.env
+.env.prod
+.git
+.gitignore
+*.log
+m365_audit_logs.json
+diag_*.js
+diag_output.txt

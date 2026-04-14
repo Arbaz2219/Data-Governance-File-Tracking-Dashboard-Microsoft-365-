@@ -1,0 +1,78 @@
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      - AUDIT_LOG_PATH=/app/data/m365_audit_logs.json
+    volumes:
+      - audit_data:/app/data
+    networks:
+      - backend
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      # HTTP Router (Redirect to HTTPS)
+      - "traefik.http.routers.backend-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.backend-${PROJECT_NAME}.entrypoints=web"
+      - "traefik.http.routers.backend-${PROJECT_NAME}.middlewares=redirect-to-https"
+ 
+      # HTTPS Router
+      - "traefik.http.routers.backend-secure-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.backend-secure-${PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.backend-secure-${PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.backend-secure-${PROJECT_NAME}.tls.certresolver=myresolver"
+ 
+      # Service Port
+      - "traefik.http.services.backend-${PROJECT_NAME}.loadbalancer.server.port=3001"
+
+  frontend:
+    build: 
+      context: ./client
+      args:
+        - VITE_API_URL=https://${BACKEND_DOMAIN}
+    restart: unless-stopped
+    networks:
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      # HTTP Router (Redirect to HTTPS)
+      - "traefik.http.routers.frontend-${PROJECT_NAME}.rule=Host(`${FRONTEND_DOMAIN}`)"
+      - "traefik.http.routers.frontend-${PROJECT_NAME}.entrypoints=web"
+      - "traefik.http.routers.frontend-${PROJECT_NAME}.middlewares=redirect-to-https"
+
+      # HTTPS Router
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.rule=Host(`${FRONTEND_DOMAIN}`)"
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.tls.certresolver=myresolver"
+
+      # Service Port
+      - "traefik.http.services.frontend-${PROJECT_NAME}.loadbalancer.server.port=80"
+
+  db:
+    image: postgres:17-alpine
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - backend
+
+volumes:
+  audit_data:
+    driver: local
+  postgres_data:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge
+  traefik_public:
+    external: true

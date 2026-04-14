@@ -196,9 +196,11 @@ function App() {
     });
   }, [instance]);
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
   const fetchData = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/audit-logs');
+      const response = await fetch(`${API_BASE}/api/audit-logs`);
       if (!response.ok) throw new Error('API Sync Pending');
       const json = await response.json();
       setData(json);
@@ -212,7 +214,7 @@ function App() {
 
   const fetchAllDevices = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/devices/all');
+      const response = await fetch(`${API_BASE}/api/devices/all`);
       if (response.ok) {
         const json = await response.json();
         setAllDevices(json);
@@ -268,7 +270,7 @@ function App() {
 
   const fetchWebActivity = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/security/web-activity');
+      const response = await fetch(`${API_BASE}/api/security/web-activity`);
       if (response.ok) {
         const json = await response.json();
         setWebActivity(json);
@@ -302,13 +304,13 @@ function App() {
     setDevices([]); 
     try {
         // Fetch Profile & Stats
-        const profileResponse = await fetch(`http://localhost:3001/api/user/${fullEmail}/profile`);
+        const profileResponse = await fetch(`${API_BASE}/api/user/${fullEmail}/profile`);
         if(!profileResponse.ok) throw new Error();
         const profileData = await profileResponse.json();
         setFullProfile(profileData);
 
         // Fetch Managed Devices (Intune)
-        const devicesResponse = await fetch(`http://localhost:3001/api/user/${fullEmail}/devices`);
+        const devicesResponse = await fetch(`${API_BASE}/api/user/${fullEmail}/devices`);
         if(devicesResponse.ok) {
            const devicesData = await devicesResponse.json();
            setDevices(devicesData);
@@ -322,7 +324,7 @@ function App() {
     if (!window.confirm(`🚨 CRITICAL ACTION: Are you sure you want to REMOTE RESTART the device "${deviceName}"? \n\nAny unsaved work for this user will be LOST immediately.`)) return;
     
     try {
-        const res = await fetch(`http://localhost:3001/api/device/${deviceId}/reboot`, { method: 'POST' });
+        const res = await fetch(`${API_BASE}/api/device/${deviceId}/reboot`, { method: 'POST' });
         const resData = await res.json();
         if (resData.success) {
             alert(`✅ Command Dispatched: ${deviceName} is being restarted.`);
