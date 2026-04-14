@@ -59,13 +59,16 @@ jobs:
             echo "Navigating to project directory..."
             cd /home/production/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
 
-            echo "Pulling latest images from Hub..."
+            echo "CLEANING: Stopping and removing old containers..."
+            sudo docker compose --env-file .env.prod down
+
+            echo "CLEANING: Pruning old images to force new pull..."
+            sudo docker image prune -a -f
+
+            echo "PULLING: Fetching latest images from Hub..."
             sudo docker compose --env-file .env.prod pull
 
-            echo "Restarting services with new build..."
+            echo "RESTARTING: Starting services..."
             sudo docker compose --env-file .env.prod up -d
 
-            echo "Maintenance: Cleaning up old temporary images..."
-            sudo docker image prune -f
-
-            echo "✅ Deployment Successful!"
+            echo "✅ Force Deployment Successful!"

@@ -1,5 +1,7 @@
 import { PublicClientApplication, LogLevel } from "@azure/msal-browser";
 
+console.log("%c [M365-SYSTEM] V3 Deployment Active - Primary URL: https://ldpm365.ldplogistics.com/", "background: #00f3ff; color: #000; padding: 5px; font-weight: bold;");
+
 export const msalConfig = {
     auth: {
         clientId: "249138ab-21cd-4538-bf4a-7cf81c3594a8",
