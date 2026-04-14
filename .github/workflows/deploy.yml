@@ -31,7 +31,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_IMAGE_BACKEND }}:latest
+          tags: arbazm221/ldp_backend:latest
 
       - name: Build & Push Frontend
         uses: docker/build-push-action@v6
@@ -41,7 +41,7 @@ jobs:
           push: true
           build-args: |
             VITE_API_URL=${{ secrets.VITE_API_URL }}
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_IMAGE_FRONTEND }}:latest
+          tags: arbazm221/ldp_frontend:latest
 
   deploy:
     name: SSH & Deploy to Server
