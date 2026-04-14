@@ -227,7 +227,12 @@ function App() {
     });
   }, [instance]);
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  // Smart API Base Discovery: 
+  // 1. Use VITE_API_URL if set during build
+  // 2. If on localhost, use local port 3001
+  // 3. If on live domain, use relative path (works with Traefik/Subdomains)
+  const API_BASE = import.meta.env.VITE_API_URL || 
+                   (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
 
   const fetchData = async () => {
     try {
