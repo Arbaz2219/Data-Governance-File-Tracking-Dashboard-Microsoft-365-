@@ -6,8 +6,8 @@ export const msalConfig = {
     auth: {
         clientId: "249138ab-21cd-4538-bf4a-7cf81c3594a8",
         authority: "https://login.microsoftonline.com/d0f9ddaa-eec7-4657-9565-aff3f741be7f",
-        redirectUri: window.location.origin + "/blank.html",
-        navigateToLoginRequestUrl: false,
+        redirectUri: window.location.origin + "/",
+        navigateToLoginRequestUrl: true,
     },
     cache: {
         cacheLocation: "sessionStorage", // Prevents state_mismatch errors

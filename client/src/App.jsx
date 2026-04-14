@@ -336,7 +336,7 @@ function App() {
   }, [accounts, activeTab]);
 
   const handleLogin = () => {
-    instance.loginPopup(loginRequest).catch(e => {
+    instance.loginRedirect(loginRequest).catch(e => {
       console.error("[MSAL Login Error]", e);
       setAuthError(e.errorMessage || e.message || "Login failed. Please try again.");
     });
