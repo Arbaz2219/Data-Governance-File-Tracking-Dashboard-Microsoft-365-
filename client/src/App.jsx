@@ -13,16 +13,20 @@ const SystemClock = () => {
         return () => clearInterval(timer);
     }, []);
 
-    const dateStr = time.toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric' });
-    const timeStr = time.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
+    const dateStr = time.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
+    const timeStr = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: '#00f3ff', borderRight: '2px solid rgba(0, 243, 255, 0.3)', paddingRight: '15px', marginRight: '15px' }}>
-            <span style={{ fontSize: '1.2rem', fontWeight: '800', letterSpacing: '1px' }}>{timeStr}</span>
-            <span style={{ fontSize: '0.7rem', color: '#8892b0', textTransform: 'uppercase' }}>{dateStr} (NY/NJ TIME)</span>
+        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: 'var(--primary)', padding: '10px 20px', marginRight: '15px' }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: '800', letterSpacing: '1px', fontFamily: 'Outfit' }}>{timeStr}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{dateStr} (LOCAL SYSTEM TIME)</span>
         </div>
     );
 };
+
+const Skeleton = ({ width, height, borderRadius = "8px" }) => (
+  <div className="skeleton" style={{ width, height, borderRadius, marginBottom: '10px' }} />
+);
 const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
   return (
     <div className="charts-grid">
@@ -69,7 +73,7 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
                 contentStyle={{background: 'rgba(20, 25, 40, 0.9)', border: '1px solid #ff00f3', borderRadius: '8px'}}
                 itemStyle={{color: '#ff00f3'}}
               />
-              <Bar dataKey="events" fill="url(#colorEvents)" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="events" fill="url(#colorEvents)" radius={[8, 8, 0, 0]} />
               </BarChart>
           </ResponsiveContainer>
         </div>
@@ -128,71 +132,79 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
   }, [data]);
 
   return (
-    <>
+    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
       <div className="metrics-grid">
-        <div className="glass-panel metric-card" style={{ borderLeftColor: "#00f3ff" }}>
-          <div className="metric-icon"><Activity size={32} /></div>
+        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--primary)", padding: '20px' }}>
+          <div className="metric-icon" style={{ background: 'rgba(0, 243, 255, 0.1)', color: 'var(--primary)' }}><Activity size={32} /></div>
           <div className="metric-info">
-            <h3>Total File Activity</h3>
-            <p>{metrics.total}</p>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Total File Activity</h3>
+            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.total}</p>
           </div>
         </div>
-        <div className="glass-panel metric-card" style={{ borderLeftColor: "#ff00f3" }}>
-          <div className="metric-icon"><Users size={32} color="#ff00f3" style={{ background: "rgba(255, 0, 243, 0.1)"}} /></div>
+        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--secondary)", padding: '20px' }}>
+          <div className="metric-icon" style={{ background: 'rgba(255, 0, 243, 0.1)', color: 'var(--secondary)' }}><Users size={32} /></div>
           <div className="metric-info">
-            <h3>Active Target Users</h3>
-            <p>{metrics.users}</p>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Active Target Users</h3>
+            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.users}</p>
           </div>
         </div>
-        <div className="glass-panel metric-card" style={{ borderLeftColor: "#00ff88" }}>
-          <div className="metric-icon"><Share2 size={32} color="#00ff88" style={{ background: "rgba(0, 255, 136, 0.1)"}} /></div>
+        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--success)", padding: '20px' }}>
+          <div className="metric-icon" style={{ background: 'rgba(0, 255, 136, 0.1)', color: 'var(--success)' }}><Share2 size={32} /></div>
           <div className="metric-info">
-            <h3>Files Shared externally</h3>
-            <p>{metrics.shared}</p>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>External Sharing</h3>
+            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.shared}</p>
           </div>
         </div>
       </div>
 
       <SecurityCharts sankeyData={sankeyData} activityData={activityData} error={error} />
 
-      <div className="glass-panel feed-panel">
-        <h2>Live File Activity Matrix (Real-Time Feed)</h2>
-        <div className="table-container">
-          <table className="feed-table">
+      <div className="glass-panel feed-panel" style={{ marginTop: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <span className="status-pulse success"></span>
+            Live File Activity Matrix
+          </h2>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>REAL-TIME FEED ACTIVE</span>
+        </div>
+        <div className="table-container" style={{ padding: '10px' }}>
+          <table className="custom-table" style={{ width: '100%' }}>
             <thead>
-              <tr>
-                <th>Time</th>
-                <th>Active User</th>
-                <th>Security Action</th>
-                <th>Target Element (File / Path)</th>
-                <th>Platform Storage</th>
+              <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <th style={{ padding: '15px' }}>Time</th>
+                <th style={{ padding: '15px' }}>Active User</th>
+                <th style={{ padding: '15px' }}>Action</th>
+                <th style={{ padding: '15px' }}>Target Element</th>
+                <th style={{ padding: '15px' }}>Cloud Location</th>
               </tr>
             </thead>
             <tbody>
               {liveFeedData.map((row) => (
                 <tr key={row.id}>
-                  <td style={{ color: '#8892b0' }}>{row.time}</td>
-                  <td className="user-link" onClick={() => handleUserClick(row.rawEmail)} style={{ fontWeight: 500 }}>{row.user}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{row.time}</td>
+                  <td className="user-link" onClick={() => handleUserClick(row.rawEmail)} style={{ color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>{row.user}</td>
                   <td>
                     <span style={{ 
-                      padding: '4px 10px', 
-                      borderRadius: '12px', 
-                      fontSize: '0.8rem',
-                      background: row.action.includes('Delete') ? 'rgba(255, 0, 0, 0.2)' : (row.action.includes('Share') ? 'rgba(0, 255, 136, 0.15)' : 'rgba(0, 243, 255, 0.15)'),
-                      color: row.action.includes('Delete') ? '#ff4d4d' : (row.action.includes('Share') ? '#00ff88' : '#00f3ff')
+                      padding: '6px 14px', 
+                      borderRadius: '20px', 
+                      fontSize: '0.75rem',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      background: row.action.includes('Delete') ? 'rgba(255, 51, 102, 0.15)' : (row.action.includes('Share') ? 'rgba(0, 255, 136, 0.15)' : 'rgba(0, 243, 255, 0.15)'),
+                      color: row.action.includes('Delete') ? 'var(--error)' : (row.action.includes('Share') ? 'var(--success)' : 'var(--primary)')
                     }}>
                       {row.action}
                     </span>
                   </td>
-                  <td>{row.target}</td>
-                  <td>{row.location}</td>
+                  <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.target}</td>
+                  <td style={{ color: 'var(--secondary)', fontWeight: '500' }}>{row.location}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-    </>
+    </div>
   );
 });
 
@@ -367,66 +379,81 @@ function App() {
   return (
     <div className="dashboard-container">
       <AuthenticatedTemplate>
-        <header className="header" style={{ marginBottom: '1.5rem' }}>
+        <header className="header" style={{ marginBottom: '2.5rem', animation: 'fadeInDown 0.6s ease-out' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <SystemClock />
             <div>
-              <h1>Data Governance Dashboard Pro</h1>
+              <h1 style={{ fontSize: '2.2rem', fontWeight: '800', background: 'linear-gradient(to right, #00f3ff, #ff00f3)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>M365 Audit Governance</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '4px' }}>
-                <p style={{color: '#00ff88', margin: 0, fontSize: '0.8rem', fontWeight: 'bold'}}>ADMIN ACCESS: {accounts[0]?.name}</p>
+                <p style={{color: 'var(--success)', margin: 0, fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px'}}>SECURE TERMINAL: {accounts[0]?.name?.toUpperCase()}</p>
                 <button 
                   onClick={() => instance.logoutRedirect()}
+                  className="glass-panel"
                   style={{ 
-                    background: 'rgba(255, 77, 77, 0.15)', 
-                    border: '1px solid #ff4d4d', 
-                    color: '#ff4d4d', 
+                    background: 'rgba(255, 51, 102, 0.1)', 
+                    border: '1px solid var(--error)', 
+                    color: 'var(--error)', 
                     fontSize: '0.7rem', 
-                    padding: '2px 10px', 
-                    borderRadius: '12px',
-                    cursor: 'pointer'
+                    padding: '4px 12px', 
+                    borderRadius: '20px',
+                    cursor: 'pointer',
+                    fontWeight: '700'
                   }}
                 >
-                  Logout
+                  TERMINATE SESSION
                 </button>
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div className="search-wrapper" style={{ position: 'relative' }}>
+              <div className="search-wrapper">
                 <input 
                   type="text" 
-                  placeholder="Search file, user or action..." 
+                  placeholder="ID, EMAIL OR FILE NAME..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    padding: '10px 15px',
-                    borderRadius: '20px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--glass-border)',
+                    padding: '14px 20px',
+                    borderRadius: '30px',
                     color: '#fff',
-                    width: '300px',
-                    fontSize: '0.9rem',
+                    width: '350px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
                     outline: 'none',
-                    transition: 'all 0.3s'
+                    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#00f3ff'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--glass-border)'}
                 />
               </div>
-              <div style={{ color: "#00ff88", display: "flex", alignItems: "center", gap: "10px", fontSize: '0.85rem', fontWeight: "700" }}>
-                  <span className="live-dot"></span>
-                  LIVE FEED ACTIVE
+              <div className="glass-panel" style={{ padding: '10px 15px', color: "var(--success)", display: "flex", alignItems: "center", gap: "12px", fontSize: '0.8rem', fontWeight: "800", letterSpacing: '1px' }}>
+                  <span className="status-pulse success"></span>
+                  RADAR ACTIVE
               </div>
           </div>
         </header>
 
         {!isAuthorized ? (
           <div className="glass-panel" style={{ padding: '5rem', textAlign: 'center' }}>
-             <ShieldAlert size={64} color="#ff4d4d" style={{ marginBottom: '1.5rem' }} />
+             <ShieldAlert size={64} color="var(--error)" style={{ marginBottom: '1.5rem' }} />
              <h2 style={{ color: '#fff', fontSize: '2rem' }}>Access Denied</h2>
-             <p style={{ color: '#8892b0', margin: '1rem 0' }}>This terminal is restricted to authorized Security Personnel only.</p>
-             <p style={{ color: '#ff4d4d', fontWeight: 'bold' }}>Contact the Head of IT to request access for {accounts[0]?.username}.</p>
+             <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>This terminal is restricted to authorized Security Personnel only.</p>
+             <p style={{ color: 'var(--error)', fontWeight: 'bold' }}>Contact the Head of IT to request access for {accounts[0]?.username}.</p>
+          </div>
+        ) : loading ? (
+          <div style={{ padding: '20px' }}>
+            <div className="metrics-grid">
+              <Skeleton width="100%" height="120px" borderRadius="16px" />
+              <Skeleton width="100%" height="120px" borderRadius="16px" />
+              <Skeleton width="100%" height="120px" borderRadius="16px" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '20px' }}>
+              <Skeleton width="100%" height="400px" borderRadius="16px" />
+              <Skeleton width="100%" height="400px" borderRadius="16px" />
+            </div>
           </div>
         ) : (
           <>
