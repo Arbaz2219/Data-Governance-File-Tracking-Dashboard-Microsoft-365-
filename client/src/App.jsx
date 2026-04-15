@@ -351,7 +351,7 @@ function App() {
       const interval = setInterval(() => {
         fetchData();
         if (activeTab === 'web') fetchWebActivity();
-      }, 3000); 
+      }, 1000); 
       return () => clearInterval(interval);
     }
   }, [accounts, activeTab]);

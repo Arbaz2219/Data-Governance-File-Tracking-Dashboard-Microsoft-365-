@@ -9,8 +9,8 @@ const AUTH_URL = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/tok
 const API_BASE_URL = `https://manage.office.com/api/v1.0/${TENANT_ID}/activity/feed/subscriptions/content`;
 const OUTPUT_FILE = process.env.AUDIT_LOG_PATH || path.join(__dirname, 'm365_audit_logs.json');
 
-// Run every 30 seconds for near-instant detection
-const POLL_INTERVAL_MS = 30 * 1000; 
+// Run every 15 seconds for near-instant detection
+const POLL_INTERVAL_MS = 15 * 1000; 
 // Fetch window: last 6 hours to handle any M365 delays securely, while keeping payload small
 const FETCH_WINDOW_HOURS = 6; 
 
