@@ -227,6 +227,26 @@ function App() {
 
   const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
 
+  // Fix stuck redirect: Clear any leftover auth hash from URL
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && (hash.includes('code=') || hash.includes('error='))) {
+      // Try to process the redirect, then clear the hash regardless
+      instance.handleRedirectPromise()
+        .then((response) => {
+          if (response) setAuthError(null);
+        })
+        .catch((err) => {
+          console.warn("[MSAL] Clearing stuck redirect state:", err.message);
+          setAuthError(null); // Don't show error, just let user try popup
+        })
+        .finally(() => {
+          // Always clean the URL hash
+          window.history.replaceState(null, '', window.location.pathname);
+        });
+    }
+  }, [instance]);
+
   // Auth state reset when successfully authenticated
   useEffect(() => {
     if (accounts.length > 0) {
