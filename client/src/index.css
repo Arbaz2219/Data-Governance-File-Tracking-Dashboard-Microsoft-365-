@@ -1,24 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
 
 :root {
-  /* Smart Dark Dashboard Palette */
-  --primary: #00d2ff;     /* Cyan Blue from charts */
-  --primary-glow: rgba(0, 210, 255, 0.2);
-  --secondary: #ff3c3c;   /* Red accent from borders/detractors */
-  --secondary-glow: rgba(255, 60, 60, 0.2);
-  --success: #1fc11f;     /* Green from promoters */
-  --warning: #ffcc00;     /* Yellow from passives */
-  --error: #ff3c3c;       /* Red for errors */
+  /* Corporate Blue & White Dashboard Palette */
+  --primary: #2bb1ff;       /* Bright Sky Blue */
+  --primary-glow: rgba(43, 177, 255, 0.2);
+  --secondary: #0073b7;     /* Deep Blue */
+  --secondary-glow: rgba(0, 115, 183, 0.2);
+  --success: #00a65a;       /* Green */
+  --warning: #f39c12;       /* Orange/Yellow */
+  --error: #dd4b39;         /* Red */
   
-  /* Smart Navy Panels */
-  --glass-bg: #1f2240;      /* Elevated Dark Navy */
-  --glass-border: rgba(255, 255, 255, 0.05); /* Minimal borders */
-  --glass-glow: rgba(0, 0, 0, 0.2);
+  /* Solid White Panels */
+  --glass-bg: #ffffff;      
+  --glass-border: #e0e0e0;  
+  --glass-glow: rgba(0, 0, 0, 0);
   
-  --bg-dark: #12142b;       /* Deep Navy Background */
-  --text-main: #ffffff;
-  --text-muted: #a6a8c4;
-  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  --bg-dark: #f0f2f5;       /* Very light grey background */
+  --text-main: #333333;     /* Dark Charcoal Text */
+  --text-muted: #777777;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -47,12 +47,10 @@ h1, h2, h3 {
 /* Glass Panels */
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
+  border-radius: 8px;
   box-shadow: var(--card-shadow);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
   overflow: hidden;
   position: relative;
 }
@@ -77,8 +75,8 @@ h1, h2, h3 {
 }
 
 .skeleton {
-  background: #1f2240;
-  background-image: linear-gradient(to right, #1f2240 0%, #2a2e54 20%, #1f2240 40%, #1f2240 100%);
+  background: #e2e8f0;
+  background-image: linear-gradient(to right, #e2e8f0 0%, #f1f5f9 20%, #e2e8f0 40%, #e2e8f0 100%);
   background-repeat: no-repeat;
   background-size: 800px 104px;
   display: inline-block;
@@ -140,12 +138,12 @@ h1, h2, h3 {
 }
 
 .custom-table tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
+  background: #f9fafb;
 }
 
 .custom-table td {
   padding: 16px;
-  background: rgba(255, 255, 255, 0.01);
+  background: transparent;
   border-top: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
 }
