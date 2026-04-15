@@ -17,9 +17,10 @@ const SystemClock = () => {
     const timeStr = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
 
     return (
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: 'var(--primary)', padding: '10px 20px', marginRight: '15px' }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: '800', letterSpacing: '1px', fontFamily: 'Outfit' }}>{timeStr}</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{dateStr} (LOCAL SYSTEM TIME)</span>
+        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: 'var(--primary)', padding: '10px 22px', marginRight: '15px' }}>
+            <div className="scanning-overlay"></div>
+            <span className="mono" style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '1px' }}>{timeStr}</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 'bold' }}>{dateStr} (SYSTEM_UPTIME)</span>
         </div>
     );
 };
@@ -57,6 +58,7 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
       </div>
 
       <div className="glass-panel chart-panel">
+        <div className="scanning-overlay"></div>
         <h2>Security Activity Pulse</h2>
         <div className="chart-container" style={{ height: "400px", width: "100%" }}>
            <ResponsiveContainer width="100%" height="100%">
@@ -67,10 +69,10 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
                   <stop offset="95%" stopColor="#ff00f3" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="hour" stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
+              <XAxis dataKey="hour" stroke="#8892b0" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#8892b0" fontSize={11} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{background: '#ffffff', border: '1px solid var(--glass-border)', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}
+                contentStyle={{background: '#0a0b16', border: '1px solid var(--glass-border)', borderRadius: '8px', color: '#fff'}}
                 itemStyle={{color: 'var(--secondary)'}}
               />
               <Bar dataKey="events" fill="url(#colorEvents)" radius={[8, 8, 0, 0]} />
@@ -135,71 +137,68 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
       <div className="metrics-grid">
-        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--primary)", padding: '20px' }}>
-          <div className="metric-icon" style={{ background: 'rgba(0, 243, 255, 0.1)', color: 'var(--primary)' }}><Activity size={32} /></div>
+        <div className="glass-panel metric-card">
+          <div className="scanning-overlay"></div>
+          <div className="metric-icon"><Activity size={32} /></div>
           <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Total File Activity</h3>
-            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.total}</p>
+            <h3>Total File Activity</h3>
+            <p className="neon-text-blue">{metrics.total}</p>
           </div>
         </div>
-        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--secondary)", padding: '20px' }}>
-          <div className="metric-icon" style={{ background: 'rgba(255, 0, 243, 0.1)', color: 'var(--secondary)' }}><Users size={32} /></div>
+        <div className="glass-panel metric-card secondary">
+          <div className="scanning-overlay"></div>
+          <div className="metric-icon" style={{ color: 'var(--secondary)' }}><Users size={32} /></div>
           <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Active Target Users</h3>
-            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.users}</p>
+            <h3>Active Target Users</h3>
+            <p className="neon-text-pink">{metrics.users}</p>
           </div>
         </div>
-        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--success)", padding: '20px' }}>
-          <div className="metric-icon" style={{ background: 'rgba(0, 255, 136, 0.1)', color: 'var(--success)' }}><Share2 size={32} /></div>
+        <div className="glass-panel metric-card success">
+          <div className="scanning-overlay"></div>
+          <div className="metric-icon" style={{ color: 'var(--success)' }}><Share2 size={32} /></div>
           <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>External Sharing</h3>
-            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.shared}</p>
+            <h3>External Sharing Activity</h3>
+            <p style={{ color: 'var(--success)', textShadow: '0 0 10px var(--success-glow)' }}>{metrics.shared}</p>
           </div>
         </div>
       </div>
 
       <SecurityCharts sankeyData={sankeyData} activityData={activityData} error={error} />
 
-      <div className="glass-panel feed-panel" style={{ marginTop: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <span className="status-pulse success"></span>
-            Live File Activity Matrix
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>REAL-TIME FEED ACTIVE</span>
-        </div>
-        <div className="table-container" style={{ padding: '10px' }}>
-          <table className="custom-table" style={{ width: '100%' }}>
+      <div className="glass-panel feed-panel" style={{ marginTop: '2.5rem' }}>
+        <div className="scanning-overlay"></div>
+        <h2 className="neon-text-blue"><LayoutDashboard size={24} /> LIVE ACCESS MATRIX</h2>
+        <div className="table-container">
+          <table className="tech-table">
             <thead>
-              <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                <th style={{ padding: '15px' }}>Time</th>
-                <th style={{ padding: '15px' }}>Active User</th>
-                <th style={{ padding: '15px' }}>Action</th>
-                <th style={{ padding: '15px' }}>Target Element</th>
-                <th style={{ padding: '15px' }}>Cloud Location</th>
+              <tr>
+                <th>TIMESTAMP</th>
+                <th>OPERATOR</th>
+                <th>IP_SOURCE</th>
+                <th>SECURITY_ACTION</th>
+                <th>RESOURCE_PATH</th>
+                <th>PLATFORM</th>
               </tr>
             </thead>
             <tbody>
               {liveFeedData.map((row) => (
                 <tr key={row.id}>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{row.time}</td>
-                  <td className="user-link" onClick={() => handleUserClick(row.rawEmail)} style={{ color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>{row.user}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{row.ip}</td>
+                  <td className="mono" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{row.time}</td>
                   <td>
-                    <span style={{ 
-                      padding: '6px 14px', 
-                      borderRadius: '20px', 
-                      fontSize: '0.75rem',
-                      fontWeight: '700',
-                      textTransform: 'uppercase',
-                      background: row.action.includes('Delete') ? 'rgba(255, 51, 102, 0.15)' : (row.action.includes('Share') ? 'rgba(0, 255, 136, 0.15)' : 'rgba(0, 243, 255, 0.15)'),
-                      color: row.action.includes('Delete') ? 'var(--error)' : (row.action.includes('Share') ? 'var(--success)' : 'var(--primary)')
+                    <span className="user-link neon-text-blue" onClick={() => handleUserClick(row.rawEmail)} style={{ fontWeight: 700 }}>{row.user.toUpperCase()}</span>
+                  </td>
+                  <td className="mono" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{row.ip}</td>
+                  <td>
+                    <span className="status-tag active" style={{ 
+                      background: row.action?.includes('Deleted') ? 'rgba(255, 51, 102, 0.1)' : 'rgba(0, 243, 255, 0.1)',
+                      color: row.action?.includes('Deleted') ? 'var(--error)' : 'var(--primary)',
+                      borderColor: row.action?.includes('Deleted') ? 'var(--error-glow)' : 'var(--primary-glow)'
                     }}>
                       {row.action}
                     </span>
                   </td>
-                  <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.target}</td>
-                  <td style={{ color: 'var(--secondary)', fontWeight: '500' }}>{row.location}</td>
+                  <td className="mono" style={{ maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff' }}>[{row.target}]</td>
+                  <td style={{ color: 'var(--secondary)', fontWeight: 'bold', fontSize: '0.75rem' }}>{row.location.toUpperCase()}</td>
                 </tr>
               ))}
             </tbody>
@@ -399,28 +398,24 @@ function App() {
   return (
     <div className="dashboard-container">
       <AuthenticatedTemplate>
-        <header className="header" style={{ marginBottom: '2.5rem', animation: 'fadeInDown 0.6s ease-out' }}>
+        <header className="header" style={{ animation: 'fadeInDown 0.6s ease-out' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <SystemClock />
             <div>
-              <h1 style={{ fontSize: '2.2rem', fontWeight: '800', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>M365 Audit Governance</h1>
+              <h1 className="neon-text-blue">M365 Audit Governance</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '4px' }}>
-                <p style={{color: 'var(--success)', margin: 0, fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px'}}>SECURE TERMINAL: {accounts[0]?.name?.toUpperCase()}</p>
+                <p style={{ color: 'var(--success)', margin: 0, fontSize: '0.75rem', fontWeight: '800', letterSpacing: '2px', textShadow: '0 0 10px var(--success-glow)' }}>SECURE_GATEWAY: {accounts[0]?.name?.toUpperCase()}</p>
                 <button 
                   onClick={() => instance.logoutPopup()}
-                  className="glass-panel"
+                  className="cyber-button"
                   style={{ 
-                    background: 'rgba(255, 51, 102, 0.1)', 
-                    border: '1px solid var(--error)', 
-                    color: 'var(--error)', 
-                    fontSize: '0.7rem', 
-                    padding: '4px 12px', 
-                    borderRadius: '20px',
-                    cursor: 'pointer',
-                    fontWeight: '700'
+                    padding: '4px 15px', 
+                    fontSize: '0.65rem',
+                    border: '1px solid var(--error)',
+                    color: 'var(--error)'
                   }}
                 >
-                  TERMINATE SESSION
+                  TERMINATE_SESSION
                 </button>
               </div>
             </div>
@@ -430,28 +425,15 @@ function App() {
               <div className="search-wrapper">
                 <input 
                   type="text" 
+                  className="search-input"
                   placeholder="ID, EMAIL OR FILE NAME..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid var(--glass-border)',
-                    padding: '12px 18px',
-                    borderRadius: '4px',
-                    color: 'var(--text-main)',
-                    width: '350px',
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    outline: 'none',
-                    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--glass-border)'}
                 />
               </div>
-              <div className="glass-panel" style={{ padding: '10px 15px', color: "var(--success)", display: "flex", alignItems: "center", gap: "12px", fontSize: '0.8rem', fontWeight: "800", letterSpacing: '1px' }}>
-                  <span className="status-pulse success"></span>
-                  RADAR ACTIVE
+              <div className="glass-panel" style={{ padding: '10px 20px', color: "var(--success)", display: "flex", alignItems: "center", gap: "12px", fontSize: '0.75rem', fontWeight: "800", letterSpacing: '1px' }}>
+                  <div className="radar-dot"></div>
+                  NET_SCAN ACTIVE
               </div>
           </div>
         </header>
@@ -477,28 +459,18 @@ function App() {
           </div>
         ) : (
           <>
-            <div className="glass-panel" style={{ display: 'flex', gap: '5px', padding: '5px', marginBottom: '2rem', width: 'fit-content' }}>
+            <div className="tab-container">
               <button 
                 onClick={() => setActiveTab('feed')}
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                  background: activeTab === 'feed' ? 'var(--primary-glow)' : 'transparent',
-                  color: activeTab === 'feed' ? 'var(--primary)' : 'var(--text-muted)',
-                  fontWeight: 600
-                }}
+                className={`tab-btn ${activeTab === 'feed' ? 'active' : ''}`}
               >
-                <Activity size={18} /> File Activity Feed
+                <Activity size={18} /> ACCESS_FEED
               </button>
               <button 
                 onClick={() => setActiveTab('web')}
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                  background: activeTab === 'web' ? 'var(--secondary-glow)' : 'transparent',
-                  color: activeTab === 'web' ? 'var(--secondary)' : 'var(--text-muted)',
-                  fontWeight: 600
-                }}
+                className={`tab-btn secondary ${activeTab === 'web' ? 'active' : ''}`}
               >
-                <Globe size={18} /> Web & Browser Tracking
+                <Globe size={18} /> WEB_TRACKING
               </button>
             </div>
 
@@ -514,31 +486,32 @@ function App() {
             )}
 
             {activeTab === 'web' && (
-              <div className="glass-panel feed-panel" style={{ minHeight: '600px' }}>
-                <h2>Browser Search & History Tracking (Microsoft Defender)</h2>
+              <div className="glass-panel feed-panel">
+                <div className="scanning-overlay"></div>
+                <h2 className="neon-text-pink"><Globe size={24} /> NETWORK TRAFFIC MONITOR</h2>
                 <div className="table-container">
-                  <table className="feed-table">
+                  <table className="tech-table">
                     <thead>
                       <tr>
-                        <th>Time (NJ EST)</th>
-                        <th>Device Name</th>
-                        <th>Source IP</th>
-                        <th>User / Account</th>
-                        <th>Accessed URL / Activity</th>
-                        <th>Remote IP</th>
+                        <th>TIMESTAMP</th>
+                        <th>DEVICE_ID</th>
+                        <th>SOURCE_IP</th>
+                        <th>OPERATOR</th>
+                        <th>REMOTE_RESOURCE</th>
+                        <th>DEST_IP</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
+                       {filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
                         <tr key={idx}>
-                          <td style={{ color: 'var(--text-muted)' }}>{formatNJTime(log.Timestamp)}</td>
-                          <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{log.DeviceName}</td>
-                          <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{log.LocalIP}</td>
-                          <td>{log.InitiatingProcessAccountName}</td>
-                          <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--success)' }}>
-                            {log.RemoteUrl || 'Internal / Local Process'}
+                          <td className="mono" style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{formatNJTime(log.Timestamp)}</td>
+                          <td style={{ color: 'var(--primary)', fontWeight: '700' }}>{log.DeviceName}</td>
+                          <td className="mono" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{log.LocalIP}</td>
+                          <td style={{ color: '#fff' }}>{log.InitiatingProcessAccountName}</td>
+                          <td className="mono" style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--success)' }}>
+                            {log.RemoteUrl || 'INTERNAL_TRAFFIC'}
                           </td>
-                          <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{log.RemoteIP}</td>
+                          <td className="mono" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{log.RemoteIP}</td>
                         </tr>
                       )) : (
                         <tr>
