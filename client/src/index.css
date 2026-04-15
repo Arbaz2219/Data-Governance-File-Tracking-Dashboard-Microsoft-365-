@@ -1,24 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
 
 :root {
-  /* Cyberpunk Palette */
-  --primary: #00f3ff;
-  --primary-glow: rgba(0, 243, 255, 0.4);
-  --secondary: #ff00f3;
-  --secondary-glow: rgba(255, 0, 243, 0.4);
-  --success: #00ff88;
-  --warning: #ffcc00;
-  --error: #ff3366;
+  /* Modern Clean Light Palette */
+  --primary: #2563eb;
+  --primary-glow: rgba(37, 99, 235, 0.2);
+  --secondary: #7c3aed;
+  --secondary-glow: rgba(124, 58, 237, 0.2);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
   
-  /* Glassmorphism 2.0 */
-  --glass-bg: rgba(10, 11, 16, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-glow: rgba(255, 255, 255, 0.03);
+  /* Glassmorphism 2.0 Light */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 1);
+  --glass-glow: rgba(0, 0, 0, 0.05);
   
-  --bg-dark: #06080d;
-  --text-main: #ffffff;
-  --text-muted: #8892b0;
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+  --bg-dark: #f0f4f8; /* Soft slate/blue gray */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
 body {
@@ -28,8 +28,8 @@ body {
   background-color: var(--bg-dark);
   color: var(--text-main);
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(255, 0, 243, 0.15) 0%, transparent 40%);
+    radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(124, 58, 237, 0.05) 0%, transparent 40%);
   background-attachment: fixed;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -79,8 +79,8 @@ h1, h2, h3 {
 }
 
 .skeleton {
-  background: #1a1f2e;
-  background-image: linear-gradient(to right, #1a1f2e 0%, #252b40 20%, #1a1f2e 40%, #1a1f2e 100%);
+  background: #e2e8f0;
+  background-image: linear-gradient(to right, #e2e8f0 0%, #f1f5f9 20%, #e2e8f0 40%, #e2e8f0 100%);
   background-repeat: no-repeat;
   background-size: 800px 104px;
   display: inline-block;
@@ -142,12 +142,12 @@ h1, h2, h3 {
 }
 
 .custom-table tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .custom-table td {
   padding: 16px;
-  background: rgba(255, 255, 255, 0.01);
+  background: rgba(255, 255, 255, 0.5);
   border-top: 1px solid var(--glass-border);
   border-bottom: 1px solid var(--glass-border);
 }

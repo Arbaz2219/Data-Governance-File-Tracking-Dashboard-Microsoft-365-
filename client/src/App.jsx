@@ -70,8 +70,8 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
               <XAxis dataKey="hour" stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{background: 'rgba(20, 25, 40, 0.9)', border: '1px solid #ff00f3', borderRadius: '8px'}}
-                itemStyle={{color: '#ff00f3'}}
+                contentStyle={{background: 'rgba(255, 255, 255, 0.9)', border: '1px solid var(--secondary)', borderRadius: '8px'}}
+                itemStyle={{color: 'var(--secondary)'}}
               />
               <Bar dataKey="events" fill="url(#colorEvents)" radius={[8, 8, 0, 0]} />
               </BarChart>
@@ -381,7 +381,7 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <SystemClock />
             <div>
-              <h1 style={{ fontSize: '2.2rem', fontWeight: '800', background: 'linear-gradient(to right, #00f3ff, #ff00f3)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>M365 Audit Governance</h1>
+              <h1 style={{ fontSize: '2.2rem', fontWeight: '800', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>M365 Audit Governance</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '4px' }}>
                 <p style={{color: 'var(--success)', margin: 0, fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px'}}>SECURE TERMINAL: {accounts[0]?.name?.toUpperCase()}</p>
                 <button 
@@ -412,11 +412,11 @@ function App() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'rgba(0,0,0,0.03)',
                     border: '1px solid var(--glass-border)',
                     padding: '14px 20px',
                     borderRadius: '30px',
-                    color: '#fff',
+                    color: 'var(--text-main)',
                     width: '350px',
                     fontSize: '0.85rem',
                     fontWeight: '600',
@@ -437,7 +437,7 @@ function App() {
         {!isAuthorized ? (
           <div className="glass-panel" style={{ padding: '5rem', textAlign: 'center' }}>
              <ShieldAlert size={64} color="var(--error)" style={{ marginBottom: '1.5rem' }} />
-             <h2 style={{ color: '#fff', fontSize: '2rem' }}>Access Denied</h2>
+             <h2 style={{ color: 'var(--text-main)', fontSize: '2rem' }}>Access Denied</h2>
              <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>This terminal is restricted to authorized Security Personnel only.</p>
              <p style={{ color: 'var(--error)', fontWeight: 'bold' }}>Contact the Head of IT to request access for {accounts[0]?.username}.</p>
           </div>
@@ -460,8 +460,8 @@ function App() {
                 onClick={() => setActiveTab('feed')}
                 style={{ 
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                  background: activeTab === 'feed' ? 'rgba(0, 243, 255, 0.15)' : 'transparent',
-                  color: activeTab === 'feed' ? '#00f3ff' : '#8892b0',
+                  background: activeTab === 'feed' ? 'var(--primary-glow)' : 'transparent',
+                  color: activeTab === 'feed' ? 'var(--primary)' : 'var(--text-muted)',
                   fontWeight: 600
                 }}
               >
@@ -471,8 +471,8 @@ function App() {
                 onClick={() => setActiveTab('web')}
                 style={{ 
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                  background: activeTab === 'web' ? 'rgba(0, 255, 136, 0.15)' : 'transparent',
-                  color: activeTab === 'web' ? '#00ff88' : '#8892b0',
+                  background: activeTab === 'web' ? 'var(--secondary-glow)' : 'transparent',
+                  color: activeTab === 'web' ? 'var(--secondary)' : 'var(--text-muted)',
                   fontWeight: 600
                 }}
               >
@@ -507,10 +507,10 @@ function App() {
                     <tbody>
                       {filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
                         <tr key={idx}>
-                          <td style={{ color: '#8892b0' }}>{formatNJTime(log.Timestamp)}</td>
-                          <td style={{ color: '#00f3ff', fontWeight: '600' }}>{log.DeviceName}</td>
+                          <td style={{ color: 'var(--text-muted)' }}>{formatNJTime(log.Timestamp)}</td>
+                          <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{log.DeviceName}</td>
                           <td>{log.InitiatingProcessAccountName}</td>
-                          <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#00ff88' }}>
+                          <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--success)' }}>
                             {log.RemoteUrl || 'Internal / Local Process'}
                           </td>
                         </tr>
@@ -597,7 +597,7 @@ function App() {
       <UnauthenticatedTemplate>
         <div className="login-container glass-panel">
           <div className="login-art">
-            <LayoutDashboard size={64} color="#00f3ff" />
+            <LayoutDashboard size={64} color="var(--primary)" />
           </div>
           <h2>LDP Logistics</h2>
           <h1>Data Governance Portal</h1>
