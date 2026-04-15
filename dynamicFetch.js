@@ -320,7 +320,7 @@ app.get('/api/security/web-activity', async (req, res) => {
             Query: `DeviceNetworkEvents 
                     | where ActionType == 'HttpConnection' 
                     | where InitiatingProcessAccountName !in~ ('help-desk', 'kundan')
-                    | project Timestamp, DeviceName, RemoteUrl, InitiatingProcessAccountName 
+                    | project Timestamp, DeviceName, LocalIP, RemoteUrl, RemoteIP, InitiatingProcessAccountName 
                     | order by Timestamp desc 
                     | take 50` 
         };

@@ -126,7 +126,8 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
         user: event.UserId?.split('@')[0] || 'System',
         action: event.Operation || 'Unknown',
         target: filename.substring(0, 50),
-        location: event.Workload || 'SharePoint'
+        location: event.Workload || 'SharePoint',
+        ip: event.ClientIP || 'N/A'
       };
     });
   }, [data]);
@@ -183,6 +184,7 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
                 <tr key={row.id}>
                   <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{row.time}</td>
                   <td className="user-link" onClick={() => handleUserClick(row.rawEmail)} style={{ color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>{row.user}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{row.ip}</td>
                   <td>
                     <span style={{ 
                       padding: '6px 14px', 
@@ -520,8 +522,10 @@ function App() {
                       <tr>
                         <th>Time (NJ EST)</th>
                         <th>Device Name</th>
+                        <th>Source IP</th>
                         <th>User / Account</th>
                         <th>Accessed URL / Activity</th>
+                        <th>Remote IP</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -529,10 +533,12 @@ function App() {
                         <tr key={idx}>
                           <td style={{ color: 'var(--text-muted)' }}>{formatNJTime(log.Timestamp)}</td>
                           <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{log.DeviceName}</td>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{log.LocalIP}</td>
                           <td>{log.InitiatingProcessAccountName}</td>
                           <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--success)' }}>
                             {log.RemoteUrl || 'Internal / Local Process'}
                           </td>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{log.RemoteIP}</td>
                         </tr>
                       )) : (
                         <tr>
