@@ -70,7 +70,7 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
               <XAxis dataKey="hour" stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{background: 'rgba(255, 255, 255, 0.9)', border: '1px solid var(--secondary)', borderRadius: '8px'}}
+                contentStyle={{background: 'rgba(31, 34, 64, 0.9)', border: '1px solid var(--secondary)', borderRadius: '8px'}}
                 itemStyle={{color: 'var(--secondary)'}}
               />
               <Bar dataKey="events" fill="url(#colorEvents)" radius={[8, 8, 0, 0]} />
@@ -412,7 +412,7 @@ function App() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    background: 'rgba(0,0,0,0.03)',
+                    background: 'rgba(255,255,255,0.05)',
                     border: '1px solid var(--glass-border)',
                     padding: '14px 20px',
                     borderRadius: '30px',
