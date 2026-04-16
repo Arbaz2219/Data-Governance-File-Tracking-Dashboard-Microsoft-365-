@@ -502,7 +502,20 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
+                      {webActivity && webActivity.error ? (
+                        <tr>
+                          <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
+                            <div className="error-box" style={{ maxWidth: '600px', margin: '0 auto', background: 'rgba(255, 60, 60, 0.1)', border: '1px solid var(--error)', padding: '2rem', borderRadius: '12px' }}>
+                              <ShieldAlert size={48} color="var(--error)" style={{ marginBottom: '1rem' }} />
+                              <h3 style={{ color: 'var(--error)', marginBottom: '10px' }}>{webActivity.error}</h3>
+                              <p style={{ color: '#fff', fontSize: '0.9rem' }}>{webActivity.details}</p>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '15px' }}>
+                                To capture employee web tracking, you must have Microsoft Defender for Endpoint assigned to your tenant and the user's machines must be physically onboarded.
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
                         <tr key={idx}>
                           <td style={{ color: 'var(--text-muted)' }}>{formatNJTime(log.Timestamp)}</td>
                           <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{log.DeviceName}</td>
