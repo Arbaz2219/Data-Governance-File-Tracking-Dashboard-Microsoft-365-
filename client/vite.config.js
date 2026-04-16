@@ -9,7 +9,15 @@ export default defineConfig({
     basicSsl()
   ],
   server: {
-    host: true,
-    https: true
+    host: '0.0.0.0',
+    port: 5173,
+    https: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 })

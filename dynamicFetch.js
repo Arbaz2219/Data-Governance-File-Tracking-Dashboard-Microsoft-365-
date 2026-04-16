@@ -169,6 +169,9 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
+// Serve Static Frontend Files from 'client/dist'
+app.use(express.static(path.join(__dirname, 'client/dist')));
+
 // Expose the JSON file to frontend (Optimized Slicing for Speed)
 app.get('/api/audit-logs', (req, res) => {
     if (fs.existsSync(OUTPUT_FILE)) {
@@ -334,10 +337,20 @@ app.get('/api/security/web-activity', async (req, res) => {
 
         res.json(defenderRes.data.results || []);
     } catch (e) {
-        console.error("Defender fetch failed:", e.response?.data || e.message);
+        const errorMsg = e.response?.data?.error?.message || e.message;
+        console.error("Defender fetch failed:", errorMsg);
+        
+        // Check for specific KQL Table resolution errors (e.g., DeviceNetworkEvents missing)
+        if (errorMsg.includes("Failed to resolve table") || errorMsg.includes("DeviceNetworkEvents")) {
+            return res.status(200).json({ 
+                error: "License Restriction", 
+                details: "Microsoft Defender for Endpoint (MDE) is not onboarded or active for these devices. Web activity tracking requires MDE P2 licenses." 
+            });
+        }
+
         res.status(500).json({ 
             error: "Defender Sync Pending", 
-            details: e.response?.data?.error?.message || "Verify Advanced Hunting permissions"
+            details: errorMsg
         });
     }
 });
@@ -372,7 +385,12 @@ app.post('/api/device/:deviceId/reboot', async (req, res) => {
     }
 });
 
+// SPA Fallback: Serve index.html for any unknown routes
+app.use((req, res) => {
+    res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`Dashboard Backend API running on http://localhost:${PORT}/api/audit-logs`);
+    console.log(`Unified Dashboard running on http://localhost:${PORT}`);
 });
