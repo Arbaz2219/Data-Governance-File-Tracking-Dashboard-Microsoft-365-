@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, User as UserIcon, ShieldAlert, Laptop, Globe } from 'lucide-react';
 import { ResponsiveSankey } from '@nivo/sankey';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useMsal, AuthenticatedTemplate, UnauthenticatedTemplate } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
 import './App.css';
@@ -17,9 +17,9 @@ const SystemClock = () => {
     const timeStr = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
 
     return (
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: 'var(--primary)', padding: '10px 20px', marginRight: '15px' }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: '800', letterSpacing: '1px', fontFamily: 'Outfit' }}>{timeStr}</span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{dateStr} (LOCAL SYSTEM TIME)</span>
+        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: 'var(--primary)', padding: '6px 15px', marginRight: '15px' }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: '800', letterSpacing: '1px', fontFamily: 'Outfit' }}>{timeStr}</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{dateStr} (LOCAL SYSTEM TIME)</span>
         </div>
     );
 };
@@ -60,21 +60,21 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
         <h2>Security Activity Pulse</h2>
         <div className="chart-container" style={{ height: "400px", width: "100%" }}>
            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData} margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
+              <AreaChart data={activityData} margin={{ top: 20, right: 20, bottom: 20, left: -20 }}>
               <defs>
                 <linearGradient id="colorEvents" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ff00f3" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#ff00f3" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.5}/>
+                  <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="hour" stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="#8892b0" fontSize={12} tickLine={false} axisLine={false} />
+              <XAxis dataKey="hour" stroke="#8892b0" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="#8892b0" fontSize={11} tickLine={false} axisLine={false} />
               <Tooltip 
-                contentStyle={{background: 'rgba(31, 34, 64, 0.9)', border: '1px solid var(--secondary)', borderRadius: '8px'}}
-                itemStyle={{color: 'var(--secondary)'}}
+                contentStyle={{background: 'rgba(31, 34, 64, 0.9)', border: '1px solid var(--primary)', borderRadius: '8px', fontSize: '0.85rem'}}
+                itemStyle={{color: 'var(--primary)'}}
               />
-              <Bar dataKey="events" fill="url(#colorEvents)" radius={[8, 8, 0, 0]} />
-              </BarChart>
+              <Area type="monotone" dataKey="events" stroke="var(--primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorEvents)" />
+              </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -137,22 +137,22 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
         <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--primary)", padding: '20px' }}>
           <div className="metric-icon" style={{ background: 'rgba(0, 243, 255, 0.1)', color: 'var(--primary)' }}><Activity size={32} /></div>
           <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Total File Activity</h3>
-            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.total}</p>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Total File Activity</h3>
+            <p style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.total}</p>
           </div>
         </div>
         <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--secondary)", padding: '20px' }}>
           <div className="metric-icon" style={{ background: 'rgba(255, 0, 243, 0.1)', color: 'var(--secondary)' }}><Users size={32} /></div>
           <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Active Target Users</h3>
-            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.users}</p>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Active Target Users</h3>
+            <p style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.users}</p>
           </div>
         </div>
         <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--success)", padding: '20px' }}>
           <div className="metric-icon" style={{ background: 'rgba(0, 255, 136, 0.1)', color: 'var(--success)' }}><Share2 size={32} /></div>
           <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>External Sharing</h3>
-            <p style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.shared}</p>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>External Sharing</h3>
+            <p style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.shared}</p>
           </div>
         </div>
       </div>
@@ -378,7 +378,7 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <SystemClock />
             <div>
-              <h1 style={{ fontSize: '2.2rem', fontWeight: '800', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>M365 Audit Governance</h1>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: '800', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>M365 Audit Governance</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '4px' }}>
                 <p style={{color: 'var(--success)', margin: 0, fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px'}}>SECURE TERMINAL: {accounts[0]?.name?.toUpperCase()}</p>
                 <button 
