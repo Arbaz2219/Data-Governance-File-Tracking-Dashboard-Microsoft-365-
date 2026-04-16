@@ -164,3 +164,90 @@
   text-decoration: underline;
   color: var(--primary);
 }
+
+/* SMART NAVY LOGIN SCREEN */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 500px;
+  margin: 10vh auto;
+  padding: 4rem 3rem;
+  text-align: center;
+}
+
+.login-art {
+  margin-bottom: 1.5rem;
+  background: rgba(0, 210, 255, 0.1);
+  padding: 1.5rem;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  display: flex;
+  box-shadow: 0 0 30px var(--primary-glow);
+}
+
+.login-container h2 {
+  font-size: 1.1rem;
+  color: var(--primary);
+  margin: 0;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.login-container h1 {
+  font-size: 2.4rem;
+  color: #fff;
+  margin: 0.5rem 0 1rem 0;
+  font-weight: 800;
+  background: linear-gradient(to right, #ffffff, var(--primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-container p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 2.5rem;
+  line-height: 1.5;
+}
+
+.login-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--primary), #0284c7);
+  color: #fff;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 210, 255, 0.2);
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--primary-glow);
+}
+
+.login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-footer {
+  margin-top: 2.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.8;
+}
