@@ -1,82 +1,134 @@
 /* App.css - Compact Aurora Component Styling */
 
-.dashboard-container {
-  padding: 1rem 2rem;
-  max-width: 1600px;
-  margin: 0 auto;
+.app-layout {
+  display: flex;
   min-height: 100vh;
+  background-color: var(--bg-main);
 }
 
-/* COMPACT HEADER */
-.header {
+/* SIDEBAR */
+.sidebar {
+  width: 260px;
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  padding: 2rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 3rem;
+  padding: 0 0.5rem;
+}
+
+.logo-section h2 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.nav-menu {
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.nav-item:hover, .nav-item.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.upgrade-card {
+  background: linear-gradient(135deg, #6e45e2 0%, #88d3ce 100%);
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  text-align: center;
+  color: #fff;
+}
+
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2.5rem;
+  overflow-y: auto;
+}
+
+/* TOPBAR */
+.topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--glass-border);
+}
+
+.search-bar-wrapper {
   position: relative;
+  width: 400px;
 }
 
-.header h1 {
-  font-size: 1.8rem;
-  font-weight: 800;
-  background: linear-gradient(to right, #ffffff, var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.search-bar-wrapper input {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  padding: 12px 1rem 12px 3rem;
+  border-radius: 12px;
+  color: #fff;
+  outline: none;
 }
 
-.header::after {
-  content: '';
-  position: absolute;
-  bottom: -1px; left: 0; width: 100px; height: 2px;
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  box-shadow: 0 0 10px var(--primary);
-}
-
-/* TIGHT METRICS GRID */
+/* METRICS GRID */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
 .metric-card {
-  padding: 1.2rem 1.4rem;
-  border-top: 3px solid var(--secondary);
+  border-radius: 24px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
-.metric-card.secondary { border-top-color: var(--primary); }
-.metric-card.success { border-top-color: var(--success); }
+.metric-card.blue-purple { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.metric-card.cyan { background: linear-gradient(135deg, #2af598 0%, #009efd 100%); }
+.metric-card.violet { background: linear-gradient(135deg, #b721ff 0%, #21d4fd 100%); }
+.metric-card.pink { background: linear-gradient(135deg, #ee9ca7 0%, #ff29fa 100%); }
 
-.metric-icon {
-  width: 45px; height: 45px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
+.metric-card .icon-placeholder {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-}
-
-.metric-info h3 {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
-
-.metric-info p {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 0;
 }
 
 /* COMPACT TABS */

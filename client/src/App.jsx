@@ -134,26 +134,31 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
       <div className="metrics-grid">
-        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--primary)", padding: '20px' }}>
-          <div className="metric-icon" style={{ background: 'rgba(0, 243, 255, 0.1)', color: 'var(--primary)' }}><Activity size={32} /></div>
-          <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Total File Activity</h3>
-            <p style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.total}</p>
+        <div className="metric-card blue-purple">
+          <div className="icon-placeholder"><Activity size={20} /></div>
+          <div>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '1rem', fontWeight: '800' }}>{metrics.total}</h3>
+            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9 }}>Total File Activity</p>
           </div>
+          <div style={{ position: 'absolute', right: '15px', bottom: '15px', opacity: 0.2 }}><Activity size={60} /></div>
         </div>
-        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--secondary)", padding: '20px' }}>
-          <div className="metric-icon" style={{ background: 'rgba(255, 0, 243, 0.1)', color: 'var(--secondary)' }}><Users size={32} /></div>
-          <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>Active Target Users</h3>
-            <p style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.users}</p>
+        
+        <div className="metric-card cyan">
+          <div className="icon-placeholder"><Users size={20} /></div>
+          <div>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '1rem', fontWeight: '800' }}>{metrics.users}</h3>
+            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9 }}>Active Target Users</p>
           </div>
+          <div style={{ position: 'absolute', right: '15px', bottom: '15px', opacity: 0.2 }}><Users size={60} /></div>
         </div>
-        <div className="glass-panel metric-card" style={{ borderLeft: "4px solid var(--success)", padding: '20px' }}>
-          <div className="metric-icon" style={{ background: 'rgba(0, 255, 136, 0.1)', color: 'var(--success)' }}><Share2 size={32} /></div>
-          <div className="metric-info">
-            <h3 style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '1px', color: 'var(--text-muted)' }}>External Sharing</h3>
-            <p style={{ fontSize: '1.5rem', fontWeight: '800', fontFamily: 'Outfit' }}>{metrics.shared}</p>
+
+        <div className="metric-card violet">
+          <div className="icon-placeholder"><Share2 size={20} /></div>
+          <div>
+            <h3 style={{ margin: '0 0 5px 0', fontSize: '1rem', fontWeight: '800' }}>{metrics.shared}</h3>
+            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9 }}>External Sharing</p>
           </div>
+          <div style={{ position: 'absolute', right: '15px', bottom: '15px', opacity: 0.2 }}><Share2 size={60} /></div>
         </div>
       </div>
 
@@ -372,64 +377,68 @@ function App() {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="app-layout">
       <AuthenticatedTemplate>
-        <header className="header" style={{ marginBottom: '2.5rem', animation: 'fadeInDown 0.6s ease-out' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <SystemClock />
-            <div>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: '800', background: 'linear-gradient(to right, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>M365 Audit Governance</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginTop: '4px' }}>
-                <p style={{color: 'var(--success)', margin: 0, fontSize: '0.8rem', fontWeight: 'bold', letterSpacing: '1px'}}>SECURE TERMINAL: {accounts[0]?.name?.toUpperCase()}</p>
-                <button 
-                  onClick={() => instance.logoutPopup()}
-                  className="glass-panel"
-                  style={{ 
-                    background: 'rgba(255, 51, 102, 0.1)', 
-                    border: '1px solid var(--error)', 
-                    color: 'var(--error)', 
-                    fontSize: '0.7rem', 
-                    padding: '4px 12px', 
-                    borderRadius: '20px',
-                    cursor: 'pointer',
-                    fontWeight: '700'
-                  }}
-                >
-                  TERMINATE SESSION
-                </button>
-              </div>
-            </div>
+        <aside className="sidebar">
+          <div className="logo-section">
+            <LayoutDashboard size={32} color="var(--primary)" />
+            <h2>SMARTNET</h2>
           </div>
+          
+          <nav className="nav-menu">
+            <div className="nav-label" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '1rem', paddingLeft: '1rem' }}>Menu</div>
+            <div 
+              className={`nav-item ${activeTab === 'feed' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('feed')}
+            >
+              <LayoutDashboard size={20} /> Dashboard
+            </div>
+            <div 
+              className={`nav-item ${activeTab === 'web' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('web')}
+            >
+              <ShieldAlert size={20} /> Data Security
+            </div>
+            <div className="nav-item"><Globe size={20} /> Shadow IT</div>
+            <div className="nav-item"><Users size={20} /> User Behavior</div>
+            
+            <div className="nav-label" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '1rem', marginTop: '2rem', paddingLeft: '1rem' }}>Manage</div>
+            <div className="nav-item"><Database size={20} /> Destinations</div>
+            <div className="nav-item"><Activity size={20} /> Protection</div>
+          </nav>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div className="search-wrapper">
-                <input 
-                  type="text" 
-                  placeholder="ID, EMAIL OR FILE NAME..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid var(--glass-border)',
-                    padding: '14px 20px',
-                    borderRadius: '30px',
-                    color: 'var(--text-main)',
-                    width: '350px',
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    outline: 'none',
-                    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
-                  onBlur={(e) => e.target.style.borderColor = 'var(--glass-border)'}
-                />
-              </div>
-              <div className="glass-panel" style={{ padding: '10px 15px', color: "var(--success)", display: "flex", alignItems: "center", gap: "12px", fontSize: '0.8rem', fontWeight: "800", letterSpacing: '1px' }}>
-                  <span className="status-pulse success"></span>
+          <div className="upgrade-card">
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem' }}>Go Pro 👑</h3>
+            <p style={{ fontSize: '0.75rem', opacity: 0.9, marginBottom: '1rem' }}>Stay Connected with your team</p>
+            <button style={{ background: '#fff', color: '#6e45e2', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', width: '100%' }}>Upgrade Now</button>
+          </div>
+        </aside>
+
+        <main className="main-content">
+          <header className="topbar">
+            <div className="search-bar-wrapper">
+              <input 
+                type="text" 
+                placeholder="Type to search..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <SystemClock />
+              <div className="glass-panel" style={{ padding: '8px 12px', border: 'none', background: 'var(--bg-card)', color: "var(--success)", display: "flex", alignItems: "center", gap: "8px", fontSize: '0.75rem', fontWeight: "700" }}>
+                  <span className="status-pulse success" style={{ margin: 0 }}></span>
                   RADAR ACTIVE
               </div>
-          </div>
-        </header>
+              <button 
+                onClick={() => instance.logoutRedirect()}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                Logout
+              </button>
+            </div>
+          </header>
 
         {!isAuthorized ? (
           <div className="glass-panel" style={{ padding: '5rem', textAlign: 'center' }}>
@@ -452,31 +461,6 @@ function App() {
           </div>
         ) : (
           <>
-            <div className="glass-panel" style={{ display: 'flex', gap: '5px', padding: '5px', marginBottom: '2rem', width: 'fit-content' }}>
-              <button 
-                onClick={() => setActiveTab('feed')}
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                  background: activeTab === 'feed' ? 'var(--primary-glow)' : 'transparent',
-                  color: activeTab === 'feed' ? 'var(--primary)' : 'var(--text-muted)',
-                  fontWeight: 600
-                }}
-              >
-                <Activity size={18} /> File Activity Feed
-              </button>
-              <button 
-                onClick={() => setActiveTab('web')}
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                  background: activeTab === 'web' ? 'var(--secondary-glow)' : 'transparent',
-                  color: activeTab === 'web' ? 'var(--secondary)' : 'var(--text-muted)',
-                  fontWeight: 600
-                }}
-              >
-                <Globe size={18} /> Web & Browser Tracking
-              </button>
-            </div>
-
             {activeTab === 'feed' && (
               <DashboardContent 
                 data={data} 

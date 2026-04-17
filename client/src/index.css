@@ -1,31 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
 
 :root {
-  /* Smart Dark Dashboard Palette */
-  --primary: #00d2ff;     /* Cyan Blue from charts */
-  --primary-glow: rgba(0, 210, 255, 0.2);
-  --secondary: #ff3c3c;   /* Red accent from borders/detractors */
-  --secondary-glow: rgba(255, 60, 60, 0.2);
-  --success: #1fc11f;     /* Green from promoters */
-  --warning: #ffcc00;     /* Yellow from passives */
-  --error: #ff3c3c;       /* Red for errors */
-  
-  /* Smart Navy Panels */
-  --glass-bg: #1f2240;      /* Elevated Dark Navy */
-  --glass-border: rgba(255, 255, 255, 0.05); /* Minimal borders */
-  --glass-glow: rgba(0, 0, 0, 0.2);
-  
-  --bg-dark: #12142b;       /* Deep Navy Background */
+  /* SmartNet Cyber Security Palette */
+  --bg-main: #16132e;
+  --bg-sidebar: #1e1b38;
+  --bg-card: #25214a;
+  --primary: #8257e5;
+  --primary-glow: rgba(130, 87, 229, 0.2);
+  --secondary: #00d2ff;
+  --accent-purple: #9d4edd;
+  --accent-pink: #ff00c1;
   --text-main: #ffffff;
-  --text-muted: #a6a8c4;
-  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  --text-muted: #8c88b0;
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --success: #00ffa3;
+  --warning: #ffcc00;
+  --error: #ff3c3c;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: 'Inter', sans-serif;
-  background-color: var(--bg-dark);
+  background-color: var(--bg-main);
   color: var(--text-main);
   background-image: none;
   background-attachment: fixed;
