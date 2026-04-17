@@ -27,6 +27,7 @@ const SystemClock = () => {
 const Skeleton = ({ width, height, borderRadius = "8px" }) => (
   <div className="skeleton" style={{ width, height, borderRadius, marginBottom: '10px' }} />
 );
+
 const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
   return (
     <div className="charts-grid">
@@ -83,7 +84,6 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
 });
 
 const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData, activityData, searchTerm }) => {
-  // Compute Metrics
   const metrics = useMemo(() => {
     if (!data || data.length === 0) return { total: 0, users: 0, shared: 0 };
     const users = new Set(data.map(d => d.UserId));
@@ -94,7 +94,6 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
   const formatNJTime = (creationTime) => {
     if (!creationTime) return "N/A";
     const date = new Date(creationTime);
-    // Format using Browser Local Time
     const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
     const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
     return `${dateStr} time ${timeStr}`;
@@ -104,7 +103,6 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
     if (!data || data.length === 0) return [];
     let processed = [...data].sort((a,b) => new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime());
     
-    // Search Filter
     if (searchTerm) {
         const term = searchTerm.toLowerCase();
         processed = processed.filter(d => 
@@ -222,7 +220,7 @@ function App() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [fullProfile, setFullProfile] = useState(null);
   const [webActivity, setWebActivity] = useState([]);
-  const [activeTab, setActiveTab] = useState('feed'); // feed, web
+  const [activeTab, setActiveTab] = useState('feed'); 
   const [searchTerm, setSearchTerm] = useState("");
 
   const AUTHORIZED_EMAILS = [
@@ -232,14 +230,12 @@ function App() {
 
   const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
 
-  // Auth state reset when successfully authenticated
   useEffect(() => {
     if (accounts.length > 0) {
       setAuthError(null);
     }
   }, [accounts]);
 
-  // Smart API Base Discovery
   const API_BASE = import.meta.env.VITE_API_URL || 
                    (window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168') || window.location.hostname.startsWith('172.') || window.location.hostname.startsWith('10.') ? `http://${window.location.hostname}:3001` : window.location.origin);
 
@@ -257,14 +253,10 @@ function App() {
     }
   };
 
-
-  // Compute Sankey Data
   const sankeyData = useMemo(() => {
     if (!data || data.length === 0) return { nodes: [{id: 'Loading'}, {id: 'Data'}], links: [{source: 'Loading', target: 'Data', value: 1}] };
-    
     const nodesMap = new Map();
     const addNode = (id) => { if (id && !nodesMap.has(id)) nodesMap.set(id, { id }) };
-    
     const linksMap = new Map();
     const addLink = (source, target) => {
         if (!source || !target || source === target) return;
@@ -273,25 +265,19 @@ function App() {
         const key = `${source}->${target}`;
         linksMap.set(key, { source, target, value: (linksMap.get(key)?.value || 0) + 1 });
     };
-    
     const topData = [...data].reverse().filter(d => !d.UserId?.includes('app@sharepoint') && !d.UserId?.includes('urn:spo')).slice(0, 40);
-
     topData.forEach(event => {
       let user = event.UserId?.split('@')[0] || "Unknown";
       if(user.length > 25) user = user.substring(0, 25) + '...';
-
       let action = event.Operation?.replace('File', '') || "Other";
       const location = event.Workload === 'OneDrive' ? 'OneDrive Storage' : 'SharePoint Site';
-
       action = `Action: ${action}`;
       addLink(user, action);
       addLink(action, location);
     });
-
     return { nodes: Array.from(nodesMap.values()), links: Array.from(linksMap.values()) };
   }, [data]);
 
-  // Compute Activity Data
   const activityData = useMemo(() => {
     if (!data || data.length === 0) return [];
     const counts = {};
@@ -350,7 +336,6 @@ function App() {
     setSelectedUser(fullEmail);
     setFullProfile(null);
     try {
-        // Fetch Profile & Stats
         const profileResponse = await fetch(`${API_BASE}/api/user/${fullEmail}/profile`);
         if(!profileResponse.ok) throw new Error();
         const profileData = await profileResponse.json();
@@ -362,7 +347,6 @@ function App() {
 
   const handleReboot = async (deviceId, deviceName) => {
     if (!window.confirm(`🚨 CRITICAL ACTION: Are you sure you want to REMOTE RESTART the device "${deviceName}"? \n\nAny unsaved work for this user will be LOST immediately.`)) return;
-    
     try {
         const res = await fetch(`${API_BASE}/api/device/${deviceId}/reboot`, { method: 'POST' });
         const resData = await res.json();
@@ -374,6 +358,14 @@ function App() {
     } catch (e) {
         alert("❌ Failed to trigger restart: " + (e.message || "Permissions Denied"));
     }
+  };
+
+  const formatNJTime = (creationTime) => {
+    if (!creationTime) return "N/A";
+    const date = new Date(creationTime);
+    const dateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    return `${dateStr} time ${timeStr}`;
   };
 
   return (
@@ -427,165 +419,180 @@ function App() {
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               <SystemClock />
+              <div className="top-icons" style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)' }}>
+                <Activity size={20} style={{ cursor: 'pointer' }} />
+                <FileText size={20} style={{ cursor: 'pointer' }} />
+                <Globe size={20} style={{ cursor: 'pointer' }} />
+              </div>
+              
+              <div className="profile-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-card)', padding: '5px 12px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                <div style={{ width: '30px', height: '30px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
+                  <UserIcon size={18} color="#fff" style={{ margin: 'auto' }} />
+                </div>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>Admin</span>
+              </div>
+
               <div className="glass-panel" style={{ padding: '8px 12px', border: 'none', background: 'var(--bg-card)', color: "var(--success)", display: "flex", alignItems: "center", gap: "8px", fontSize: '0.75rem', fontWeight: "700" }}>
                   <span className="status-pulse success" style={{ margin: 0 }}></span>
-                  RADAR ACTIVE
+                  CONNECTED
               </div>
+              
               <button 
                 onClick={() => instance.logoutRedirect()}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                style={{ background: 'rgba(255, 60, 60, 0.1)', border: 'none', color: 'var(--error)', padding: '8px 12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.75rem' }}
               >
-                Logout
+                LOGOUT
               </button>
             </div>
           </header>
 
-        {!isAuthorized ? (
-          <div className="glass-panel" style={{ padding: '5rem', textAlign: 'center' }}>
-             <ShieldAlert size={64} color="var(--error)" style={{ marginBottom: '1.5rem' }} />
-             <h2 style={{ color: 'var(--text-main)', fontSize: '2rem' }}>Access Denied</h2>
-             <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>This terminal is restricted to authorized Security Personnel only.</p>
-             <p style={{ color: 'var(--error)', fontWeight: 'bold' }}>Contact the Head of IT to request access for {accounts[0]?.username}.</p>
-          </div>
-        ) : loading ? (
-          <div style={{ padding: '20px' }}>
-            <div className="metrics-grid">
-              <Skeleton width="100%" height="120px" borderRadius="16px" />
-              <Skeleton width="100%" height="120px" borderRadius="16px" />
-              <Skeleton width="100%" height="120px" borderRadius="16px" />
+          {!isAuthorized ? (
+            <div className="glass-panel" style={{ padding: '5rem', textAlign: 'center' }}>
+               <ShieldAlert size={64} color="var(--error)" style={{ marginBottom: '1.5rem' }} />
+               <h2 style={{ color: 'var(--text-main)', fontSize: '2rem' }}>Access Denied</h2>
+               <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>This terminal is restricted to authorized Security Personnel only.</p>
+               <p style={{ color: 'var(--error)', fontWeight: 'bold' }}>Contact the Head of IT to request access for {accounts[0]?.username}.</p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '20px' }}>
-              <Skeleton width="100%" height="400px" borderRadius="16px" />
-              <Skeleton width="100%" height="400px" borderRadius="16px" />
+          ) : loading ? (
+            <div style={{ padding: '20px' }}>
+              <div className="metrics-grid">
+                <Skeleton width="100%" height="120px" borderRadius="16px" />
+                <Skeleton width="100%" height="120px" borderRadius="16px" />
+                <Skeleton width="100%" height="120px" borderRadius="16px" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '20px' }}>
+                <Skeleton width="100%" height="400px" borderRadius="16px" />
+                <Skeleton width="100%" height="400px" borderRadius="16px" />
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
-            {activeTab === 'feed' && (
-              <DashboardContent 
-                data={data} 
-                error={error} 
-                handleUserClick={handleUserClick} 
-                sankeyData={sankeyData}
-                activityData={activityData}
-                searchTerm={searchTerm}
-              />
-            )}
+          ) : (
+            <>
+              {activeTab === 'feed' && (
+                <DashboardContent 
+                  data={data} 
+                  error={error} 
+                  handleUserClick={handleUserClick} 
+                  sankeyData={sankeyData}
+                  activityData={activityData}
+                  searchTerm={searchTerm}
+                />
+              )}
 
-            {activeTab === 'web' && (
-              <div className="glass-panel feed-panel" style={{ minHeight: '600px' }}>
-                <h2>Browser Search & History Tracking (Microsoft Defender)</h2>
-                <div className="table-container">
-                  <table className="feed-table">
-                    <thead>
-                      <tr>
-                        <th>Time (NJ EST)</th>
-                        <th>Device Name</th>
-                        <th>User / Account</th>
-                        <th>Accessed URL / Activity</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {webActivity && webActivity.error ? (
+              {activeTab === 'web' && (
+                <div className="glass-panel feed-panel" style={{ minHeight: '600px' }}>
+                  <h2>Browser Search & History Tracking (Microsoft Defender)</h2>
+                  <div className="table-container">
+                    <table className="feed-table">
+                      <thead>
                         <tr>
-                          <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
-                            <div className="error-box" style={{ maxWidth: '600px', margin: '0 auto', background: 'rgba(255, 60, 60, 0.1)', border: '1px solid var(--error)', padding: '2rem', borderRadius: '12px' }}>
-                              <ShieldAlert size={48} color="var(--error)" style={{ marginBottom: '1rem' }} />
-                              <h3 style={{ color: 'var(--error)', marginBottom: '10px' }}>{webActivity.error}</h3>
-                              <p style={{ color: '#fff', fontSize: '0.9rem' }}>{webActivity.details}</p>
-                              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '15px' }}>
-                                To capture employee web tracking, you must have Microsoft Defender for Endpoint assigned to your tenant and the user's machines must be physically onboarded.
-                              </p>
-                            </div>
-                          </td>
+                          <th>Time (Browser Local)</th>
+                          <th>Device Name</th>
+                          <th>User / Account</th>
+                          <th>Accessed URL / Activity</th>
                         </tr>
-                      ) : filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
-                        <tr key={idx}>
-                          <td style={{ color: 'var(--text-muted)' }}>{formatNJTime(log.Timestamp)}</td>
-                          <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{log.DeviceName}</td>
-                          <td>{log.InitiatingProcessAccountName}</td>
-                          <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--success)' }}>
-                            {log.RemoteUrl || 'Internal / Local Process'}
-                          </td>
-                        </tr>
-                      )) : (
-                        <tr>
-                          <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
-                            <div style={{ opacity: 0.5 }}>
-                              <Globe size={48} style={{ marginBottom: '1rem' }} />
-                              <p>No real-time web activity detected in the last 10 minutes.</p>
-                              <p style={{ fontSize: '0.8rem' }}>Browser searches from Chrome & Edge will appear here automatically.</p>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {selectedUser && (
-              <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
-                <div className="modal-content glass-panel profile-modal" onClick={e => e.stopPropagation()}>
-                  <div className="profile-header">
-                    <div className="profile-avatar"><UserIcon size={40} /></div>
-                    <div className="profile-title-set">
-                      <h3>{fullProfile?.profile?.displayName || selectedUser.split('@')[0]}</h3>
-                      <p>{selectedUser}</p>
-                    </div>
+                      </thead>
+                      <tbody>
+                        {webActivity && webActivity.error ? (
+                          <tr>
+                            <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
+                              <div className="error-box" style={{ maxWidth: '600px', margin: '0 auto', background: 'rgba(255, 60, 60, 0.1)', border: '1px solid var(--error)', padding: '2rem', borderRadius: '12px' }}>
+                                <ShieldAlert size={48} color="var(--error)" style={{ marginBottom: '1rem' }} />
+                                <h3 style={{ color: 'var(--error)', marginBottom: '10px' }}>{webActivity.error}</h3>
+                                <p style={{ color: '#fff', fontSize: '0.9rem' }}>{webActivity.details}</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '15px' }}>
+                                  To capture employee web tracking, you must have Microsoft Defender for Endpoint assigned to your tenant and the user's machines must be physically onboarded.
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
+                          <tr key={idx}>
+                            <td style={{ color: 'var(--text-muted)' }}>{formatNJTime(log.Timestamp)}</td>
+                            <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{log.DeviceName}</td>
+                            <td>{log.InitiatingProcessAccountName}</td>
+                            <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--success)' }}>
+                              {log.RemoteUrl || 'Internal / Local Process'}
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
+                              <div style={{ opacity: 0.5 }}>
+                                <Globe size={48} style={{ marginBottom: '1rem' }} />
+                                <p>No real-time web activity detected in the last 10 minutes.</p>
+                                <p style={{ fontSize: '0.8rem' }}>Browser searches from Chrome & Edge will appear here automatically.</p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                  
-                  <div className="profile-details-grid">
-                    <div className="detail-item">
-                      <label>Department</label>
-                      <span>{fullProfile?.profile?.department || 'Not Specified'}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Job Title</label>
-                      <span>{fullProfile?.profile?.jobTitle || 'Unassigned'}</span>
-                    </div>
-                  </div>
-
-                  {fullProfile ? (
-                    fullProfile.error ? (
-                        <div className="error-box">
-                          <ShieldAlert size={20} />
-                          <p>Graph API Error: Access Denied. Verify "User.Read.All" & "Files.Read.All" permissions.</p>
-                        </div>
-                    ) : (
-                      <>
-                        <div className="stats-row">
-                          <div className="stat-pill">
-                            <Database size={16} />
-                            <span>{fullProfile.stats.uniqueFileCount} Unique Files Touched</span>
-                          </div>
-                          <div className="stat-pill">
-                            <Activity size={16} />
-                            <span>{fullProfile.stats.totalEvents} Total Activities</span>
-                          </div>
-                        </div>
-
-                        <div className="storage-box">
-                          <div className="storage-info">
-                            <h3>{(fullProfile.storage.used / 1073741824).toFixed(2)} GB</h3>
-                            <p>OneDrive Usage</p>
-                          </div>
-                          <div className="storage-bar-bg">
-                            <div className="storage-bar-fill" style={{ width: `${(fullProfile.storage.used / fullProfile.storage.total * 100)}%` }}></div>
-                          </div>
-                          <p className="storage-footer">Capacity: {(fullProfile.storage.total / 1073741824).toFixed(0)} GB</p>
-                        </div>
-                      </>
-                    )
-                  ) : <p className="loading-text">Mining Employee Intelligence Data...</p>}
-                  
-                  <button className="close-btn" onClick={() => setSelectedUser(null)}>Close Profile</button>
                 </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+
+              {selectedUser && (
+                <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
+                  <div className="modal-content glass-panel profile-modal" onClick={e => e.stopPropagation()}>
+                    <div className="profile-header">
+                      <div className="profile-avatar"><UserIcon size={40} /></div>
+                      <div className="profile-title-set">
+                        <h3>{fullProfile?.profile?.displayName || selectedUser.split('@')[0]}</h3>
+                        <p>{selectedUser}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="profile-details-grid">
+                      <div className="detail-item">
+                        <label>Department</label>
+                        <span>{fullProfile?.profile?.department || 'Not Specified'}</span>
+                      </div>
+                      <div className="detail-item">
+                        <label>Job Title</label>
+                        <span>{fullProfile?.profile?.jobTitle || 'Unassigned'}</span>
+                      </div>
+                    </div>
+
+                    {fullProfile ? (
+                      fullProfile.error ? (
+                          <div className="error-box">
+                            <ShieldAlert size={20} />
+                            <p>Graph API Error: Access Denied. Verify "User.Read.All" & "Files.Read.All" permissions.</p>
+                          </div>
+                      ) : (
+                        <>
+                          <div className="stats-row">
+                            <div className="stat-pill">
+                              <Database size={16} />
+                              <span>{fullProfile.stats.uniqueFileCount} Unique Files Touched</span>
+                            </div>
+                            <div className="stat-pill">
+                              <Activity size={16} />
+                              <span>{fullProfile.stats.totalEvents} Total Activities</span>
+                            </div>
+                          </div>
+
+                          <div className="storage-box">
+                            <div className="storage-info">
+                              <h3>{(fullProfile.storage.used / 1073741824).toFixed(2)} GB</h3>
+                              <p>OneDrive Usage</p>
+                            </div>
+                            <div className="storage-bar-bg">
+                              <div className="storage-bar-fill" style={{ width: `${(fullProfile.storage.used / fullProfile.storage.total * 100)}%` }}></div>
+                            </div>
+                            <p className="storage-footer">Capacity: {(fullProfile.storage.total / 1073741824).toFixed(0)} GB</p>
+                          </div>
+                        </>
+                      )
+                    ) : <p className="loading-text">Mining Employee Intelligence Data...</p>}
+                    
+                    <button className="close-btn" onClick={() => setSelectedUser(null)}>Close Profile</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </main>
       </AuthenticatedTemplate>
 
       <UnauthenticatedTemplate>
