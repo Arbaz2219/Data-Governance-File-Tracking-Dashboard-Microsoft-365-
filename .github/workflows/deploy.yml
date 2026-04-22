@@ -2,7 +2,7 @@ name: Build & Deploy (Full CI/CD)
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -60,15 +60,15 @@ jobs:
             cd /root/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
 
             echo "CLEANING: Stopping and removing old containers..."
-            sudo docker compose --env-file .env.prod down
+            sudo docker-compose --env-file .env.prod down
 
             echo "CLEANING: Pruning everything to force clean layers..."
             sudo docker system prune -f
 
             echo "PULLING: Fetching latest images from Hub..."
-            sudo docker compose --env-file .env.prod pull
+            sudo docker-compose --env-file .env.prod pull
 
             echo "RESTARTING: Starting services..."
-            sudo docker compose --env-file .env.prod up -d
+            sudo docker-compose --env-file .env.prod up -d
 
             echo "✅ Force Deployment Successful!"
