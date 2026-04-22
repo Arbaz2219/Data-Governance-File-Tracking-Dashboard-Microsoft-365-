@@ -238,9 +238,10 @@ function calculateUserRisk() {
         // 1. Audit Log Risks (Deletions are high risk)
         auditLogs.forEach(entry => {
             const user = entry.UserId;
-            if (!riskProfiles[user]) riskProfiles[user] = { score: 0, flags: [], events: 0 };
+            if (!riskProfiles[user]) riskProfiles[user] = { score: 0, flags: [], events: 0, files: new Set() };
             
             riskProfiles[user].events++;
+            if (entry.ObjectId) riskProfiles[user].files.add(entry.ObjectId);
             if (entry.Operation === 'FileDeleted') {
                 riskProfiles[user].score += 15;
                 riskProfiles[user].flags.push('File Deletion Detected');
@@ -272,7 +273,8 @@ function calculateUserRisk() {
             score: Math.min(data.score, 100), // Cap at 100
             level: data.score > 70 ? 'Critical' : data.score > 30 ? 'Moderate' : 'Low',
             flags: [...new Set(data.flags)].slice(0, 3), // Unique top 3 flags
-            activityCount: data.events
+            activityCount: data.events,
+            fileCount: data.files.size
         })).sort((a,b) => b.score - a.score);
 
     } catch (e) {

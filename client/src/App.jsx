@@ -587,6 +587,12 @@ function App() {
             >
               <Users size={20} /> User Intelligence
             </div>
+            <div 
+              className={`nav-item ${activeTab === 'behavior' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('behavior')}
+            >
+              <Activity size={20} /> User Behavior
+            </div>
 
             
           </nav>
@@ -799,6 +805,79 @@ function App() {
                 </div>
               </div>
             )}
+
+            {activeTab === 'behavior' && (
+              <div className="behavior-container" style={{ animation: 'fadeIn 0.5s ease-out', padding: '20px' }}>
+                <div className="glass-panel" style={{ padding: '25px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                     <h2 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Activity size={24} /> User Behavior & Risk Analysis
+                     </h2>
+                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Aggregated from last 24h M365 Audit Logs
+                     </div>
+                  </div>
+
+                  <div className="table-container">
+                    <table className="custom-table" style={{ width: '100%' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '15px' }}>User Entity</th>
+                          <th>Risk Level</th>
+                          <th>Risk Score</th>
+                          <th>Activity Count</th>
+                          <th style={{ color: 'var(--primary)' }}>Files Accessible</th>
+                          <th>Security Flags</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {riskStats.map((profile, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '15px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                                  {profile.user[0].toUpperCase()}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '600' }}>{profile.user.split('@')[0]}</div>
+                                  <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{profile.user}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ 
+                                padding: '4px 8px', 
+                                borderRadius: '4px', 
+                                fontSize: '0.7rem', 
+                                fontWeight: '800',
+                                background: profile.level === 'Critical' ? 'rgba(245, 34, 45, 0.1)' : profile.level === 'Moderate' ? 'rgba(250, 173, 20, 0.1)' : 'rgba(82, 196, 26, 0.1)',
+                                color: profile.level === 'Critical' ? '#f5222d' : profile.level === 'Moderate' ? '#faad14' : '#52c41a'
+                              }}>
+                                {profile.level}
+                              </span>
+                            </td>
+                            <td>
+                               <div style={{ width: '100%', background: 'rgba(255,255,255,0.05)', height: '6px', borderRadius: '3px', marginTop: '5px' }}>
+                                  <div style={{ width: `${profile.score}%`, height: '100%', background: profile.score > 70 ? '#f5222d' : '#00f2ff', borderRadius: '3px' }}></div>
+                               </div>
+                               <div style={{ fontSize: '0.7rem', marginTop: '2px' }}>{profile.score}/100</div>
+                            </td>
+                            <td>{profile.activityCount}</td>
+                            <td style={{ fontWeight: '700', color: 'var(--primary)' }}>{profile.fileCount}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                {profile.flags.map((flag, j) => (
+                                  <span key={j} style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '2px' }}>{flag}</span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
 
             {selectedUser && activeTab !== 'users' && (
                 <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
