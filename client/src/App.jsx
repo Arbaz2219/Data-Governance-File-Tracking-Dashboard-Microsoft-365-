@@ -878,6 +878,7 @@ function App() {
                   </div>
                 </div>
               </div>
+            )}
 
             {selectedUser && activeTab !== 'users' && (
                 <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
