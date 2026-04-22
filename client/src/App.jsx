@@ -382,8 +382,7 @@ function App() {
 
   const AUTHORIZED_EMAILS = [
     'kundan@ldplogistics.com',
-    'help-desk@ldplogistics.com',
-    'arbaz@ldplogistics.com'
+    'help-desk@ldplogistics.com'
   ];
 
   const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
