@@ -374,12 +374,7 @@ function App() {
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
 
-  const AUTHORIZED_EMAILS = [
-    'kundan@ldplogistics.com',
-    'help-desk@ldplogistics.com'
-  ];
-
-  const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
+  const isAuthorized = accounts[0]?.username?.toLowerCase().endsWith('@ldplogistics.com');
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -390,7 +385,9 @@ function App() {
   const API_BASE = import.meta.env.VITE_API_URL || '';
   const fetchData = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/audit-logs`);
+      const response = await fetch(`${API_BASE}/api/audit-logs`, {
+        headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' }
+      });
       if (!response.ok) throw new Error('API Sync Pending');
       const json = await response.json();
       setData(json);
@@ -441,7 +438,9 @@ function App() {
 
   const fetchWebActivity = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/security/web-activity`);
+      const response = await fetch(`${API_BASE}/api/security/web-activity`, {
+        headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' }
+      });
       if (response.ok) {
         const json = await response.json();
         setWebActivity(json);
@@ -474,7 +473,9 @@ function App() {
 
   const fetchActiveCalls = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/security/active-calls`);
+      const response = await fetch(`${API_BASE}/api/security/active-calls`, {
+        headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' }
+      });
       if (response.ok) {
         const json = await response.json();
         setActiveCalls(json);
@@ -485,8 +486,8 @@ function App() {
   const fetchSecurityInsights = async () => {
     try {
       const [shadowRes, riskRes] = await Promise.all([
-        fetch(`${API_BASE}/api/security/shadow-it`),
-        fetch(`${API_BASE}/api/security/risk-stats`)
+        fetch(`${API_BASE}/api/security/shadow-it`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } }),
+        fetch(`${API_BASE}/api/security/risk-stats`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } })
       ]);
       if (shadowRes.ok) setShadowLogs(await shadowRes.json());
       if (riskRes.ok) setRiskStats(await riskRes.json());
@@ -511,7 +512,7 @@ function App() {
 
   useEffect(() => {
     if (accounts.length > 0) {
-      fetch(`${API_BASE}/api/users/list`)
+      fetch(`${API_BASE}/api/users/list`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } })
         .then(res => res.json())
         .then(data => setUsersList(data))
         .catch(err => console.error("Failed to fetch users list", err));
@@ -531,7 +532,9 @@ function App() {
     setSelectedUser(fullEmail);
     setFullProfile(null);
     try {
-        const profileResponse = await fetch(`${API_BASE}/api/user/${fullEmail}/profile`);
+        const profileResponse = await fetch(`${API_BASE}/api/user/${fullEmail}/profile`, {
+          headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' }
+        });
         if(!profileResponse.ok) throw new Error();
         const profileData = await profileResponse.json();
         setFullProfile(profileData);
@@ -543,7 +546,10 @@ function App() {
   const handleReboot = async (deviceId, deviceName) => {
     if (!window.confirm(`🚨 CRITICAL ACTION: Are you sure you want to REMOTE RESTART the device "${deviceName}"? \n\nAny unsaved work for this user will be LOST immediately.`)) return;
     try {
-        const res = await fetch(`${API_BASE}/api/device/${deviceId}/reboot`, { method: 'POST' });
+        const res = await fetch(`${API_BASE}/api/device/${deviceId}/reboot`, { 
+            method: 'POST',
+            headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' }
+        });
         const resData = await res.json();
         if (resData.success) {
             alert(`✅ Command Dispatched: ${deviceName} is being restarted.`);

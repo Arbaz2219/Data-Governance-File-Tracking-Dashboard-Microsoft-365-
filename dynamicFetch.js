@@ -205,6 +205,21 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // Enable JSON parsing for incoming desktop agent logs
 
+// SECURITY MIDDLEWARE: Block direct endpoint access
+const DASHBOARD_SECRET = process.env.DASHBOARD_SECRET_KEY || "LDP_SECURE_9821_!@#$";
+app.use('/api', (req, res, next) => {
+    // Allow the desktop agent to report activity without the dashboard key
+    if (req.path === '/security/report-activity') return next();
+    
+    const key = req.headers['x-dashboard-key'];
+    if (key === DASHBOARD_SECRET) {
+        next();
+    } else {
+        console.warn(`Blocked unauthorized access attempt to: ${req.path} from IP: ${req.ip}`);
+        res.status(403).json({ error: "Access Denied: Secure Terminal Only" });
+    }
+});
+
 // Serve Static Frontend Files from 'client/dist'
 app.use(express.static(path.join(__dirname, 'client/dist'), { setHeaders: (res, path) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
