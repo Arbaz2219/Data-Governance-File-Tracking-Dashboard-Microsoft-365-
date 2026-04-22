@@ -1,31 +1,32 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
 
  :root {
-  /* Professional Data Governance Palette - Microsoft Inspired */
-  --bg-main: #000c17;
-  --bg-sidebar: #001529;
-  --bg-card: #001f3f;
-  --bg-header: #001529;
-  --primary: #0078D4; /* Microsoft Azure Blue */
-  --primary-glow: rgba(0, 120, 212, 0.3);
-  --secondary: #10b981; /* Emerald Green Accent */
-  --secondary-glow: rgba(16, 185, 129, 0.3);
+  /* LDP Logistics Premium Branding */
+  --bg-main: #06080c;
+  --bg-sidebar: #0a0d14;
+  --bg-card: #0d111b;
+  --bg-header: #0a0d14;
+  
+  --primary: #D82B1B; /* LDP Logistics Red */
+  --primary-glow: rgba(216, 43, 27, 0.3);
+  
+  --accent: #00D2FF; /* Logistics Cyan */
+  --accent-glow: rgba(0, 210, 255, 0.3);
+  
+  --secondary: #00D2FF; 
+  --secondary-glow: rgba(0, 210, 255, 0.2);
+  
   --text-main: #ffffff;
-  --text-muted: #8c8c8c;
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-bg: #001529;
+  --text-muted: #94a3b8;
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-bg: rgba(13, 17, 27, 0.7);
+  
   --success: #10b981;
   --warning: #f59e0b;
   --error: #ef4444;
-  --accent-orange: #f97316;
-  /* Heat Map Tokens */
-  --heat-severe: #ef4444;
-  --heat-major: #f59e0b;
-  --heat-moderate: #d4b106;
-  --heat-minor: #10b981;
-  --heat-insignificant: #065f46;
-  --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-  --header-height: 64px;
+  
+  --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --header-height: 70px;
 }
 
 body.light-mode {
