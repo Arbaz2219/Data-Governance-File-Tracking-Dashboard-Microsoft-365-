@@ -605,6 +605,12 @@ function App() {
             >
               <Activity size={20} /> User Behavior
             </div>
+            <div 
+              className={`nav-item ${activeTab === 'intelligence' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('intelligence')}
+            >
+              <Shield size={20} /> Risk Intelligence
+            </div>
 
             
           </nav>
@@ -675,14 +681,112 @@ function App() {
           ) : (
             <>
               {activeTab === 'feed' && (
-                <DashboardContent 
-                  data={data} 
-                  error={error} 
-                  handleUserClick={handleUserClick} 
-                  sankeyData={sankeyData}
-                  activityData={activityData}
-                  searchTerm={searchTerm}
-                />
+                <div style={{ padding: '20px' }}>
+                  {/* TOP KPI CARDS */}
+                  <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--primary)' }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Risk Score</div>
+                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--primary)' }}>0.0%</div>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--secondary)' }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Active Incidents</div>
+                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--secondary)' }}>0</div>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--warning)' }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Vulnerability Rate</div>
+                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--warning)' }}>1.8%</div>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--success)' }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Compliance Score</div>
+                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--success)' }}>52.6%</div>
+                    </div>
+                  </div>
+
+                  {/* MIDDLE ROW PANELS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                    <div className="glass-panel" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Risk Rating Breakdown</h3>
+                      <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(0,245,212,0.05) 0%, transparent 70%)' }}>
+                        <div style={{ width: '120px', height: '120px', borderRadius: '50%', border: '15px solid var(--primary)', borderRightColor: 'var(--secondary)', borderBottomColor: 'var(--warning)', borderLeftColor: 'var(--success)' }}></div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '15px', fontSize: '0.7rem' }}>
+                        <span style={{ color: 'var(--primary)' }}>● Low</span>
+                        <span style={{ color: 'var(--secondary)' }}>● High</span>
+                        <span style={{ color: 'var(--warning)' }}>● Medium</span>
+                        <span style={{ color: 'var(--success)' }}>● Safe</span>
+                      </div>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Risk Heat Map</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '5px' }}>
+                        {[...Array(25)].map((_, i) => (
+                          <div key={i} style={{ 
+                            height: '40px', 
+                            background: i === 0 || i === 6 || i === 12 ? 'var(--error)' : i < 10 ? 'var(--warning)' : 'var(--success)',
+                            opacity: 0.6 + (Math.random() * 0.4),
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.7rem',
+                            fontWeight: '800'
+                          }}>{Math.floor(Math.random() * 9)}</div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                        <span>Insignificant</span>
+                        <span>Severe</span>
+                      </div>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: '20px', textAlign: 'center' }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Action Plan Breakdown</h3>
+                      <div style={{ position: 'relative', width: '160px', height: '80px', margin: '20px auto 0', overflow: 'hidden' }}>
+                        <div style={{ width: '160px', height: '160px', borderRadius: '50%', border: '20px solid rgba(255,255,255,0.05)', borderTopColor: 'var(--primary)', transform: 'rotate(-45deg)' }}></div>
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, fontSize: '1.5rem', fontWeight: '800' }}>72%</div>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>Mitigation Tasks Completed</p>
+                    </div>
+                  </div>
+
+                  {/* BOTTOM ROW CHARTS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                    <div className="glass-panel" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Top 5 Vulnerabilities</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {['Data Leakage', 'Unauthorized Access', 'Shadow IT Sprawl', 'Legacy Systems', 'Phishing Links'].map((v, i) => (
+                          <div key={v}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '5px' }}>
+                              <span>{v}</span>
+                              <span style={{ color: 'var(--secondary)' }}>{95 - (i * 15)}%</span>
+                            </div>
+                            <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
+                              <div style={{ width: `${95 - (i * 15)}%`, height: '100%', background: 'var(--secondary)', borderRadius: '4px', boxShadow: '0 0 10px var(--secondary-glow)' }}></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Top 5 Entities</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {['Global Logistics Hub', 'Regional DC - North', 'Financial Services', 'Supply Chain API', 'External Partners'].map((v, i) => (
+                          <div key={v}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '5px' }}>
+                              <span>{v}</span>
+                              <span style={{ color: 'var(--primary)' }}>{88 - (i * 12)}%</span>
+                            </div>
+                            <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
+                              <div style={{ width: `${88 - (i * 12)}%`, height: '100%', background: 'var(--primary)', borderRadius: '4px', boxShadow: '0 0 10px var(--primary-glow)' }}></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
 
 
@@ -1018,8 +1122,8 @@ function App() {
               <div className="login-brand-logo">
                 <img src="/ldp-logo.png" alt="LDP Logistics" style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
               </div>
-              <div className="login-brand-tag">LDP LOGISTICS</div>
-              <h1 className="login-brand-title">Data Governance<br/>Command Portal</h1>
+              <div className="login-brand-tag" style={{ color: 'var(--secondary)' }}>DP LOGISTICS</div>
+              <h1 className="login-brand-title">Security Risk<br/>Management Portal</h1>
               <p className="login-brand-sub">Enterprise-grade Microsoft 365 audit intelligence, real-time file tracking, and insider threat detection — all in one terminal.</p>
 
               <div className="login-brand-stats">

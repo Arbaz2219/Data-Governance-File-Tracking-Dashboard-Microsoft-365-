@@ -60,7 +60,7 @@
 }
 
 .nav-item.active {
-  background: rgba(216, 43, 27, 0.1);
+  background: rgba(0, 245, 212, 0.1);
   color: var(--primary);
   border-left: 4px solid var(--primary);
   font-weight: 700;

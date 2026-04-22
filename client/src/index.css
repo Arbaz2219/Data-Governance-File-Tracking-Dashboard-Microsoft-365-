@@ -1,56 +1,44 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
 
  :root {
-  /* LDP Logistics Light Mode Default */
-  --bg-main: #f8fafc;
-  --bg-sidebar: #ffffff;
-  --bg-card: #ffffff;
-  --bg-header: #ffffff;
+  /* DP LOGISTICS - Futuristic Security Palette */
+  --bg-main: #0A0F1E;    /* Deep Navy Black */
+  --bg-sidebar: #0D1B2A; /* Dark Midnight Blue */
+  --bg-card: #112240;    /* Dark Steel Blue */
+  --bg-header: #0D1B2A;
   
-  --primary: #D82B1B; /* LDP Red */
-  --primary-glow: rgba(216, 43, 27, 0.1);
+  --primary: #00F5D4;    /* Electric Cyan */
+  --primary-glow: rgba(0, 245, 212, 0.3);
   
-  --accent: #00D2FF; 
-  --accent-glow: rgba(0, 210, 255, 0.1);
+  --accent: #00F5D4;
+  --secondary: #FF4D6D;  /* Vivid Coral Red */
+  --secondary-glow: rgba(255, 77, 109, 0.3);
   
-  --secondary: #0ea5e9; 
-  --secondary-glow: rgba(14, 165, 233, 0.1);
+  --text-main: #E0E0E0;  /* Soft White */
+  --text-muted: #8892A4; /* Muted Gray */
   
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 245, 212, 0.12);
+  --glass-bg: rgba(17, 34, 64, 0.7);
   
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
+  --success: #06D6A0;
+  --warning: #FF9F1C;
+  --error: #FF4D6D;
+  --purple: #7B2FBE;
   
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  /* Heat Map Colors */
+  --heat-high: #FF4D6D;
+  --heat-medium: #FF9F1C;
+  --heat-low: #06D6A0;
+  
+  --card-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
   --header-height: 70px;
 }
 
-/* Dark Override for Login Page ONLY */
-.dark-theme-override {
-  --bg-main: #06080c;
-  --bg-sidebar: #0a0d14;
-  --bg-card: #0d111b;
-  --bg-header: #0a0d14;
-  --text-main: #ffffff;
-  --text-muted: #94a3b8;
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(13, 17, 27, 0.7);
-  --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-}
-
 body.dark-mode {
-  --bg-main: #06080c;
-  --bg-sidebar: #0a0d14;
-  --bg-card: #0d111b;
-  --bg-header: #0a0d14;
-  --text-main: #ffffff;
-  --text-muted: #94a3b8;
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(13, 17, 27, 0.7);
+  /* Redundant but keeps consistency */
+  --bg-main: #0A0F1E;
+  --bg-sidebar: #0D1B2A;
+  --bg-card: #112240;
 }
 
 body {
