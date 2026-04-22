@@ -380,7 +380,13 @@ function App() {
     document.body.classList.toggle('light-mode');
   };
 
-  const isAuthorized = accounts[0]?.username?.toLowerCase().endsWith('@ldplogistics.com');
+  const AUTHORIZED_EMAILS = [
+    'kundan@ldplogistics.com',
+    'help-desk@ldplogistics.com',
+    'arbaz@ldplogistics.com'
+  ];
+
+  const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
 
   useEffect(() => {
     if (accounts.length > 0) {
