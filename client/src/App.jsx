@@ -1,3 +1,4 @@
+// v1.0.2 - Forcing clean build to resolve potential cache issues
 import React, { useState, useEffect, useMemo } from 'react';
 import { Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, User as UserIcon, ShieldAlert, Laptop, Globe, Lock } from 'lucide-react';
 import { ResponsiveSankey } from '@nivo/sankey';
