@@ -57,7 +57,7 @@ jobs:
           port: 22
           script: |
             echo "Navigating to project directory..."
-            cd /home/production/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
+            cd /root/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
 
             echo "CLEANING: Stopping and removing old containers..."
             sudo docker compose --env-file .env.prod down

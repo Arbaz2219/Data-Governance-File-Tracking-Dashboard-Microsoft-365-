@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, User as UserIcon, ShieldAlert, Laptop, Globe } from 'lucide-react';
+import { Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, User as UserIcon, ShieldAlert, Laptop, Globe, Lock } from 'lucide-react';
 import { ResponsiveSankey } from '@nivo/sankey';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useMsal, AuthenticatedTemplate, UnauthenticatedTemplate } from "@azure/msal-react";
@@ -17,9 +17,9 @@ const SystemClock = () => {
     const timeStr = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
 
     return (
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: 'var(--primary)', padding: '6px 15px', marginRight: '15px' }}>
-            <span style={{ fontSize: '1.2rem', fontWeight: '800', letterSpacing: '1px', fontFamily: 'Outfit' }}>{timeStr}</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>{dateStr} (LOCAL SYSTEM TIME)</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', color: '#fff', padding: '0 15px', opacity: 0.9 }}>
+            <span style={{ fontSize: '1rem', fontWeight: '600', letterSpacing: '0.5px' }}>{timeStr}</span>
+            <span style={{ fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{dateStr}</span>
         </div>
     );
 };
@@ -33,24 +33,24 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
     <div className="charts-grid">
       <div className="glass-panel chart-panel">
         <h2>Data Flow Architecture (User → Action → Platform)</h2>
-        <div className="chart-container" style={{ height: "420px", width: "100%" }}>
+        <div className="chart-container" style={{ height: "320px", width: "100%" }}>
           {error ? <div style={{color: 'red', marginTop: '20px'}}>{error}</div> : (
             <ResponsiveSankey
                 data={sankeyData}
                 margin={{ top: 20, right: 180, bottom: 20, left: 180 }}
                 align="justify"
-                colors={{ scheme: 'category10' }}
+                colors={{ scheme: 'set2' }}
                 nodeOpacity={1}
-                nodeThickness={18}
-                nodeSpacing={24}
+                nodeThickness={20}
+                nodeSpacing={20}
                 nodeBorderWidth={0}
-                linkOpacity={0.4}
-                linkHoverOpacity={0.7}
-                labelPadding={20}
-                labelTextColor="#ffffff"
+                linkOpacity={0.3}
+                linkHoverOpacity={0.6}
+                labelPadding={15}
+                labelTextColor="var(--text-main)"
                 theme={{
-                  labels: { text: { fontSize: 12, fontWeight: 600, fontFamily: 'Outfit, Inter'} },
-                  tooltip: { container: { background: "rgba(10, 11, 16, 0.95)", color: "#fff", borderRadius: '8px', border: "1px solid rgba(255,255,255,0.1)" } }
+                  labels: { text: { fontSize: 11, fontWeight: 700, fontFamily: 'Inter'} },
+                  tooltip: { container: { background: "#1e293b", color: "#f8fafc", borderRadius: '8px', border: "1px solid rgba(255,255,255,0.1)", boxShadow: '0 10px 15px -3px rgba(0,0,0,0.4)' } }
                 }}
             />
           )}
@@ -83,12 +83,114 @@ const SecurityCharts = React.memo(({ sankeyData, activityData, error }) => {
   );
 });
 
+const CyberGauge = ({ value }) => {
+  const rotation = (value / 100) * 180 - 90;
+  return (
+    <div style={{ position: 'relative', width: '200px', height: '120px', margin: 'auto' }}>
+      <svg width="200" height="120" viewBox="0 0 200 120">
+        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#222" strokeWidth="20" />
+        <path d="M 20 100 A 80 80 0 0 1 73 35" fill="none" stroke="#52c41a" strokeWidth="20" />
+        <path d="M 73 35 A 80 80 0 0 1 127 35" fill="none" stroke="#faad14" strokeWidth="20" />
+        <path d="M 127 35 A 80 80 0 0 1 180 100" fill="none" stroke="#f5222d" strokeWidth="20" />
+        <line x1="100" y1="100" x2={100 + 70 * Math.sin((rotation * Math.PI) / 180)} y2={100 - 70 * Math.cos((rotation * Math.PI) / 180)} stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="100" cy="100" r="8" fill="#fff" />
+      </svg>
+      <div style={{ textAlign: 'center', marginTop: '-20px', fontWeight: '800', fontSize: '1.2rem' }}>{value}%</div>
+    </div>
+  );
+};
+
+const CyberMetricCard = ({ title, value }) => (
+  <div className="metric-card">
+    <div className="card-header-bar">{title}</div>
+    <div className="card-content">
+      <div style={{ fontSize: '2.5rem', fontWeight: '800', letterSpacing: '1px' }}>{value}</div>
+    </div>
+  </div>
+);
+
+const KpiCard = ({ label, value }) => (
+  <div className="metric-card headerless">
+    <div className="label">{label}</div>
+    <div className="value">{value}</div>
+  </div>
+);
+
+const HeatMapTable = ({ data }) => {
+  const rows = ['Severe', 'Major', 'Moderate', 'Minor', 'Insignificance'];
+  const cols = ['Rare', 'Unlikely', 'Moderate', 'Likely', 'Almost certain'];
+  
+  // Dynamic cell generation for "Heart Map"
+  const getCellClass = (row, colIndex) => {
+    if (row === 'Severe' || colIndex === 4) return 'cell-severe';
+    if (row === 'Major' || colIndex === 3) return 'cell-major';
+    if (row === 'Moderate' || colIndex === 2) return 'cell-moderate';
+    if (row === 'Minor' || colIndex === 1) return 'cell-minor';
+    return 'cell-insignificant';
+  };
+
+  return (
+    <table className="heart-map-table">
+      <thead>
+        <tr>
+          <th className="header-label">Total # of Risk Rating</th>
+          {cols.map(c => <th key={c} className="header-label">{c}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={r}>
+            <td className="header-label">{r}</td>
+            {cols.map((c, j) => (
+              <td key={c} className={getCellClass(r, j)}>
+                {Math.floor(Math.random() * 100) + 20}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
 const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData, activityData, searchTerm }) => {
   const metrics = useMemo(() => {
-    if (!data || data.length === 0) return { total: 0, users: 0, shared: 0 };
-    const users = new Set(data.map(d => d.UserId));
-    const shared = data.filter(d => d.Operation?.includes('Share')).length;
-    return { total: data.length, users: users.size, shared };
+    if (!data || data.length === 0) return { total: 0, riskyUsers: 0, riskPercent: 0, progress: 88.8 };
+    const users = [...new Set(data.map(d => d.UserId))];
+    const riskyUsers = users.filter(u => data.filter(d => d.UserId === u && (d.Operation?.includes('Delete') || d.Operation?.includes('Share'))).length > 5).length;
+    return { 
+      total: data.length, 
+      riskyUsers, 
+      riskPercent: ((riskyUsers / users.length) * 100 || 0).toFixed(1),
+      progress: (Math.min(data.length / 500, 100) * 0.9).toFixed(1)
+    };
+  }, [data]);
+
+  const riskBreakdown = [
+    { name: 'Critical', value: 14, fill: '#ff4d4f' },
+    { name: 'High', value: 33, fill: '#faad14' },
+    { name: 'Medium', value: 48, fill: '#00f2ff' },
+    { name: 'Low', value: 5, fill: '#52c41a' },
+  ];
+
+  const actionPlanData = [
+    { name: 'Implemented', value: 30.9, fill: '#00f2ff' },
+    { name: 'Planned', value: 8.5, fill: 'rgba(0, 242, 255, 0.4)' },
+    { name: 'Tbd', value: 50.2, fill: 'rgba(255, 255, 255, 0.1)' },
+  ];
+
+  const vulnsData = useMemo(() => {
+    const counts = { 'Encryption vulns': 26, 'Excessive permissions': 68, 'Dormant accounts': 34, 'Unauthorized Apps': 45, 'Vpn Usage': 29 };
+    return Object.entries(counts).map(([name, count]) => ({ name, count }));
+  }, []);
+
+  const entitiesData = useMemo(() => {
+    const userCounts = {};
+    data.forEach(d => { userCounts[d.UserId] = (userCounts[d.UserId] || 0) + 1; });
+    return Object.entries(userCounts)
+      .sort((a,b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([user, count]) => ({ name: user.split('@')[0], count }));
   }, [data]);
 
   const formatNJTime = (creationTime) => {
@@ -131,76 +233,119 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <div className="metrics-grid">
-        <div className="metric-card blue-purple">
-          <div className="icon-placeholder"><Activity size={20} /></div>
-          <div>
-            <h3 style={{ margin: '0 0 5px 0', fontSize: '1rem', fontWeight: '800' }}>{metrics.total}</h3>
-            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9 }}>Total File Activity</p>
+      {/* ROW 1: KPIs */}
+      <div className="kpi-row">
+        <KpiCard label="% Risks >= threshold" value={`${metrics.riskPercent}%`} />
+        <KpiCard label="# Of risks >= threshold" value={metrics.riskyUsers} />
+        <KpiCard label="Risks analysis progress" value={`${metrics.progress}%`} />
+        <KpiCard label="Response progress" value="52.6%" />
+      </div>
+
+      {/* ROW 2: Analysis Tiers */}
+      <div className="analysis-row">
+        <div className="glass-panel chart-panel">
+          <h2 style={{ background: '#00f2ff', color: '#000' }}>Risk rating breakdown</h2>
+          <div style={{ flex: 1, padding: '20px' }}>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={riskBreakdown} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {riskBreakdown.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#001529', border: 'none' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <div style={{ position: 'absolute', right: '15px', bottom: '15px', opacity: 0.2 }}><Activity size={60} /></div>
-        </div>
-        
-        <div className="metric-card cyan">
-          <div className="icon-placeholder"><Users size={20} /></div>
-          <div>
-            <h3 style={{ margin: '0 0 5px 0', fontSize: '1rem', fontWeight: '800' }}>{metrics.users}</h3>
-            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9 }}>Active Target Users</p>
-          </div>
-          <div style={{ position: 'absolute', right: '15px', bottom: '15px', opacity: 0.2 }}><Users size={60} /></div>
         </div>
 
-        <div className="metric-card violet">
-          <div className="icon-placeholder"><Share2 size={20} /></div>
-          <div>
-            <h3 style={{ margin: '0 0 5px 0', fontSize: '1rem', fontWeight: '800' }}>{metrics.shared}</h3>
-            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9 }}>External Sharing</p>
+        <div className="glass-panel chart-panel">
+          <h2 style={{ background: '#00f2ff', color: '#000' }}>Risk heart map</h2>
+          <div style={{ flex: 1, padding: '15px' }}>
+            <HeatMapTable />
           </div>
-          <div style={{ position: 'absolute', right: '15px', bottom: '15px', opacity: 0.2 }}><Share2 size={60} /></div>
+        </div>
+
+        <div className="glass-panel chart-panel">
+          <h2 style={{ background: '#00f2ff', color: '#000' }}>Action plan breakdown</h2>
+          <div style={{ flex: 1, padding: '20px' }}>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={actionPlanData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {actionPlanData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#001529', border: 'none' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      <SecurityCharts sankeyData={sankeyData} activityData={activityData} error={error} />
-
-      <div className="glass-panel feed-panel" style={{ marginTop: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px' }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <span className="status-pulse success"></span>
-            Live File Activity Matrix
-          </h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>REAL-TIME FEED ACTIVE</span>
+      {/* ROW 3: Targets */}
+      <div className="targets-row">
+        <div className="glass-panel chart-panel">
+          <h2 style={{ background: '#00f2ff', color: '#000' }}>#Risks &gt;= threshold: top 5 vulnerabilities</h2>
+          <div style={{ flex: 1, padding: '20px' }}>
+             <ResponsiveContainer width="100%" height={200}>
+              <BarChart layout="vertical" data={vulnsData}>
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" stroke="#fff" fontSize={10} width={120} />
+                <Tooltip contentStyle={{ background: '#001529', border: '1px solid #ff4d4f' }} />
+                <Bar dataKey="count" fill="#ff4d4f" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+             </ResponsiveContainer>
+          </div>
         </div>
-        <div className="table-container" style={{ padding: '10px' }}>
+
+        <div className="glass-panel chart-panel">
+          <h2 style={{ background: '#00f2ff', color: '#000' }}># Risks &gt;= threshold: top 5 entities</h2>
+          <div style={{ flex: 1, padding: '20px' }}>
+             <ResponsiveContainer width="100%" height={200}>
+              <BarChart layout="vertical" data={entitiesData}>
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" stroke="#fff" fontSize={10} width={120} />
+                <Tooltip contentStyle={{ background: '#001529', border: '1px solid #00f2ff' }} />
+                <Bar dataKey="count" fill="#00f2ff" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+             </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-panel chart-panel" style={{ marginTop: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', background: '#000c17', borderBottom: '1px solid rgba(0,242,255,0.2)' }}>
+          <h2 style={{ background: 'none', padding: 0, textAlign: 'left', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px', color: '#00f2ff' }}>
+            <span className="status-pulse success" style={{ background: '#00f2ff' }}></span>
+            Real-time Cyber Risk Matrix
+          </h2>
+        </div>
+        <div className="table-container" style={{ padding: '0' }}>
           <table className="custom-table" style={{ width: '100%' }}>
-            <thead>
-              <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                <th style={{ padding: '15px' }}>Time</th>
-                <th style={{ padding: '15px' }}>Active User</th>
-                <th style={{ padding: '15px' }}>Action</th>
-                <th style={{ padding: '15px' }}>Target Element</th>
-                <th style={{ padding: '15px' }}>Cloud Location</th>
+            <thead style={{ background: '#001a33' }}>
+              <tr style={{ textAlign: 'left', color: '#8c8c8c', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                <th style={{ padding: '15px' }}>DateTime</th>
+                <th>Actor Entity</th>
+                <th>Risk Classification</th>
+                <th>Target Resource</th>
               </tr>
             </thead>
             <tbody>
-              {liveFeedData.map((row) => (
+              {liveFeedData.slice(0, 15).map((row) => (
                 <tr key={row.id}>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{row.time}</td>
-                  <td className="user-link" onClick={() => handleUserClick(row.rawEmail)} style={{ color: 'var(--primary)', fontWeight: '600', cursor: 'pointer' }}>{row.user}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '12px 15px' }}>{row.time}</td>
+                  <td onClick={() => handleUserClick(row.rawEmail)} style={{ color: '#00f2ff', fontWeight: '600', cursor: 'pointer' }}>{row.user}</td>
                   <td>
                     <span style={{ 
-                      padding: '6px 14px', 
-                      borderRadius: '20px', 
-                      fontSize: '0.75rem',
+                      padding: '4px 10px', 
+                      borderRadius: '4px', 
+                      fontSize: '0.7rem',
                       fontWeight: '700',
-                      textTransform: 'uppercase',
-                      background: row.action.includes('Delete') ? 'rgba(255, 51, 102, 0.15)' : (row.action.includes('Share') ? 'rgba(0, 255, 136, 0.15)' : 'rgba(0, 243, 255, 0.15)'),
-                      color: row.action.includes('Delete') ? 'var(--error)' : (row.action.includes('Share') ? 'var(--success)' : 'var(--primary)')
+                      background: row.action.includes('Delete') ? 'rgba(245, 34, 45, 0.1)' : 'rgba(0, 242, 255, 0.1)',
+                      color: row.action.includes('Delete') ? '#f5222d' : '#00f2ff',
+                      border: `1px solid ${row.action.includes('Delete') ? 'rgba(245, 34, 45, 0.2)' : 'rgba(0, 242, 255, 0.2)'}`
                     }}>
                       {row.action}
                     </span>
                   </td>
-                  <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.target}</td>
-                  <td style={{ color: 'var(--secondary)', fontWeight: '500' }}>{row.location}</td>
+                  <td style={{ fontSize: '0.8rem', opacity: 0.8 }}>{row.target}</td>
                 </tr>
               ))}
             </tbody>
@@ -222,6 +367,11 @@ function App() {
   const [webActivity, setWebActivity] = useState([]);
   const [activeTab, setActiveTab] = useState('feed'); 
   const [searchTerm, setSearchTerm] = useState("");
+  const [usersList, setUsersList] = useState([]);
+  const [selectedUserIntel, setSelectedUserIntel] = useState(null);
+  const [activeCalls, setActiveCalls] = useState([]);
+  const [shadowLogs, setShadowLogs] = useState([]);
+  const [riskStats, setRiskStats] = useState([]);
 
   const AUTHORIZED_EMAILS = [
     'kundan@ldplogistics.com',
@@ -236,9 +386,7 @@ function App() {
     }
   }, [accounts]);
 
-  const API_BASE = import.meta.env.VITE_API_URL || 
-                   (window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168') || window.location.hostname.startsWith('172.') || window.location.hostname.startsWith('10.') ? `http://${window.location.hostname}:3001` : window.location.origin);
-
+  const API_BASE = import.meta.env.VITE_API_URL || '';
   const fetchData = async () => {
     try {
       const response = await fetch(`${API_BASE}/api/audit-logs`);
@@ -321,7 +469,53 @@ function App() {
       }, 3000); 
       return () => clearInterval(interval);
     }
+  }, [accounts]);
+
+  const fetchActiveCalls = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/security/active-calls`);
+      if (response.ok) {
+        const json = await response.json();
+        setActiveCalls(json);
+      }
+    } catch (err) { console.error("Call fetch error:", err); }
+  };
+
+  const fetchSecurityInsights = async () => {
+    try {
+      const [shadowRes, riskRes] = await Promise.all([
+        fetch(`${API_BASE}/api/security/shadow-it`),
+        fetch(`${API_BASE}/api/security/risk-stats`)
+      ]);
+      if (shadowRes.ok) setShadowLogs(await shadowRes.json());
+      if (riskRes.ok) setRiskStats(await riskRes.json());
+    } catch (err) { console.error("Insights fetch error:", err); }
+  };
+
+  useEffect(() => {
+    if (accounts.length > 0) {
+      fetchData();
+      fetchWebActivity();
+      fetchActiveCalls();
+      fetchSecurityInsights();
+      const interval = setInterval(() => {
+        fetchData();
+        if (activeTab === 'web') fetchWebActivity();
+        if (activeTab === 'comms') fetchActiveCalls();
+        if (activeTab === 'shadow' || activeTab === 'behavior') fetchSecurityInsights();
+      }, 5000); 
+      return () => clearInterval(interval);
+    }
   }, [accounts, activeTab]);
+
+  useEffect(() => {
+    if (accounts.length > 0) {
+      fetch(`${API_BASE}/api/users/list`)
+        .then(res => res.json())
+        .then(data => setUsersList(data))
+        .catch(err => console.error("Failed to fetch users list", err));
+    }
+  }, [accounts]);
 
   const handleLogin = () => {
     instance.loginRedirect(loginRequest).catch(e => {
@@ -373,12 +567,14 @@ function App() {
       <AuthenticatedTemplate>
         <aside className="sidebar">
           <div className="logo-section">
-            <LayoutDashboard size={32} color="var(--primary)" />
-            <h2>SMARTNET</h2>
+            <div style={{ padding: '8px', background: 'rgba(20, 184, 166, 0.1)', borderRadius: '10px', display: 'flex' }}>
+              <LayoutDashboard size={24} color="var(--primary)" />
+            </div>
+            <h2>LDP LOGISTICS</h2>
           </div>
           
           <nav className="nav-menu">
-            <div className="nav-label" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '1rem', paddingLeft: '1rem' }}>Menu</div>
+            <div className="nav-label" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.75rem', paddingLeft: '1.5rem', letterSpacing: '1.5px' }}>Terminal Menu</div>
             <div 
               className={`nav-item ${activeTab === 'feed' ? 'active' : ''}`} 
               onClick={() => setActiveTab('feed')}
@@ -386,62 +582,51 @@ function App() {
               <LayoutDashboard size={20} /> Dashboard
             </div>
             <div 
-              className={`nav-item ${activeTab === 'web' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('web')}
+              className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} 
+              onClick={() => setActiveTab('users')}
             >
-              <ShieldAlert size={20} /> Data Security
+              <Users size={20} /> User Intelligence
             </div>
-            <div className="nav-item"><Globe size={20} /> Shadow IT</div>
-            <div className="nav-item"><Users size={20} /> User Behavior</div>
+
             
-            <div className="nav-label" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '1rem', marginTop: '2rem', paddingLeft: '1rem' }}>Manage</div>
-            <div className="nav-item"><Database size={20} /> Destinations</div>
-            <div className="nav-item"><Activity size={20} /> Protection</div>
           </nav>
 
-          <div className="upgrade-card">
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem' }}>Go Pro 👑</h3>
-            <p style={{ fontSize: '0.75rem', opacity: 0.9, marginBottom: '1rem' }}>Stay Connected with your team</p>
-            <button style={{ background: '#fff', color: '#6e45e2', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', width: '100%' }}>Upgrade Now</button>
-          </div>
         </aside>
 
-        <main className="main-content">
+        <main className="main-content" style={{ padding: 0 }}>
           <header className="topbar">
-            <div className="search-bar-wrapper">
-              <input 
-                type="text" 
-                placeholder="Type to search..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+               <span style={{ fontWeight: '600', fontSize: '1rem' }}>Data Governance Dashboard</span>
+               <div className="search-bar-wrapper" style={{ position: 'relative', width: '400px' }}>
+                  <input 
+                     type="text" 
+                     placeholder="Search resources, users, and logs (G+/)" 
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+               </div>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               <SystemClock />
-              <div className="top-icons" style={{ display: 'flex', gap: '15px', color: 'var(--text-muted)' }}>
-                <Activity size={20} style={{ cursor: 'pointer' }} />
-                <FileText size={20} style={{ cursor: 'pointer' }} />
-                <Globe size={20} style={{ cursor: 'pointer' }} />
+              <div className="top-icons" style={{ display: 'flex', gap: '15px', color: '#fff', opacity: 0.8 }}>
+                <Activity size={18} style={{ cursor: 'pointer' }} />
+                <FileText size={18} style={{ cursor: 'pointer' }} />
+                <Globe size={18} style={{ cursor: 'pointer' }} />
               </div>
               
-              <div className="profile-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-card)', padding: '5px 12px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                <div style={{ width: '30px', height: '30px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
-                  <UserIcon size={18} color="#fff" style={{ margin: 'auto' }} />
+              <div className="profile-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: '4px' }}>
+                <div style={{ width: '24px', height: '24px', background: '#004578', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserIcon size={14} color="#fff" />
                 </div>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>Admin</span>
-              </div>
-
-              <div className="glass-panel" style={{ padding: '8px 12px', border: 'none', background: 'var(--bg-card)', color: "var(--success)", display: "flex", alignItems: "center", gap: "8px", fontSize: '0.75rem', fontWeight: "700" }}>
-                  <span className="status-pulse success" style={{ margin: 0 }}></span>
-                  CONNECTED
+                <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>{accounts[0]?.name?.split(' ')[0]}</span>
               </div>
               
               <button 
                 onClick={() => instance.logoutRedirect()}
-                style={{ background: 'rgba(255, 60, 60, 0.1)', border: 'none', color: 'var(--error)', padding: '8px 12px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.75rem' }}
+                style={{ background: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '2px', fontWeight: '600', cursor: 'pointer', fontSize: '0.75rem' }}
               >
-                LOGOUT
+                Sign out
               </button>
             </div>
           </header>
@@ -478,60 +663,144 @@ function App() {
                 />
               )}
 
-              {activeTab === 'web' && (
-                <div className="glass-panel feed-panel" style={{ minHeight: '600px' }}>
-                  <h2>Browser Search & History Tracking (Microsoft Defender)</h2>
-                  <div className="table-container">
-                    <table className="feed-table">
-                      <thead>
-                        <tr>
-                          <th>Time (Browser Local)</th>
-                          <th>Device Name</th>
-                          <th>User / Account</th>
-                          <th>Accessed URL / Activity</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {webActivity && webActivity.error ? (
-                          <tr>
-                            <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
-                              <div className="error-box" style={{ maxWidth: '600px', margin: '0 auto', background: 'rgba(255, 60, 60, 0.1)', border: '1px solid var(--error)', padding: '2rem', borderRadius: '12px' }}>
-                                <ShieldAlert size={48} color="var(--error)" style={{ marginBottom: '1rem' }} />
-                                <h3 style={{ color: 'var(--error)', marginBottom: '10px' }}>{webActivity.error}</h3>
-                                <p style={{ color: '#fff', fontSize: '0.9rem' }}>{webActivity.details}</p>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '15px' }}>
-                                  To capture employee web tracking, you must have Microsoft Defender for Endpoint assigned to your tenant and the user's machines must be physically onboarded.
-                                </p>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : filteredWebActivity.length > 0 ? filteredWebActivity.map((log, idx) => (
-                          <tr key={idx}>
-                            <td style={{ color: 'var(--text-muted)' }}>{formatNJTime(log.Timestamp)}</td>
-                            <td style={{ color: 'var(--primary)', fontWeight: '600' }}>{log.DeviceName}</td>
-                            <td>{log.InitiatingProcessAccountName}</td>
-                            <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--success)' }}>
-                              {log.RemoteUrl || 'Internal / Local Process'}
-                            </td>
-                          </tr>
-                        )) : (
-                          <tr>
-                            <td colSpan="4" style={{ textAlign: 'center', padding: '3rem' }}>
-                              <div style={{ opacity: 0.5 }}>
-                                <Globe size={48} style={{ marginBottom: '1rem' }} />
-                                <p>No real-time web activity detected in the last 10 minutes.</p>
-                                <p style={{ fontSize: '0.8rem' }}>Browser searches from Chrome & Edge will appear here automatically.</p>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
 
-              {selectedUser && (
+  
+
+
+
+            {activeTab === 'users' && (
+              <div className="user-intelligence-container" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', height: 'calc(100vh - 160px)' }}>
+                {/* User List Sidebar */}
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                   <div style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 15px 0' }}>Employee Directory</h3>
+                      <input 
+                        type="text" 
+                        placeholder="Search users..." 
+                        style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: '#fff' }}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                   </div>
+                   <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 20px' }}>
+                      {usersList.filter(u => u.toLowerCase().includes(searchTerm.toLowerCase())).map(user => (
+                        <div 
+                          key={user}
+                          className={`nav-item ${selectedUserIntel === user ? 'active' : ''}`}
+                          style={{ marginBottom: '5px', padding: '12px' }}
+                          onClick={() => {
+                            setSelectedUserIntel(user);
+                            handleUserClick(user); // Also trigger the existing profile fetch
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                             <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+                                {user[0].toUpperCase()}
+                             </div>
+                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{user.split('@')[0]}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user}</div>
+                             </div>
+                          </div>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+
+                {/* User Detail Content */}
+                <div style={{ height: '100%', overflowY: 'auto' }}>
+                   {selectedUserIntel ? (
+                      <div style={{ animation: 'fadeIn 0.5s ease' }}>
+                         <div className="glass-panel" style={{ padding: '30px', marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                               <div>
+                                  <h1 style={{ margin: 0 }}>{fullProfile?.profile?.displayName || selectedUserIntel.split('@')[0]}</h1>
+                                  <p style={{ color: 'var(--primary)', fontWeight: '600' }}>{selectedUserIntel}</p>
+                                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                     <span className="glass-panel" style={{ padding: '4px 12px', fontSize: '0.8rem', background: 'rgba(130, 87, 229, 0.1)' }}>{fullProfile?.profile?.jobTitle || 'Standard User'}</span>
+                                     <span className="glass-panel" style={{ padding: '4px 12px', fontSize: '0.8rem', background: 'rgba(0, 210, 255, 0.1)' }}>{fullProfile?.profile?.department || 'Operations'}</span>
+                                  </div>
+                               </div>
+                               <div style={{ textAlign: 'right' }}>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>M365 STATUS</div>
+                                  <div style={{ color: 'var(--success)', fontWeight: '800' }}>ACTIVE & MONITORED</div>
+                               </div>
+                            </div>
+                         </div>
+
+                         <div className="metrics-grid">
+                            <div className="glass-panel" style={{ padding: '25px', display: 'flex', gap: '20px', alignItems: 'center' }}>
+                               <div style={{ width: '60px', height: '60px', background: 'linear-gradient(45deg, var(--primary), var(--secondary))', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                                  <Database size={32} />
+                               </div>
+                               <div>
+                                  <div style={{ fontSize: '2rem', fontWeight: '800' }}>{fullProfile?.stats?.uniqueFileCount || '0'}</div>
+                                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>OneDrive Files Accessible</div>
+                               </div>
+                            </div>
+                            <div className="glass-panel" style={{ padding: '25px', display: 'flex', gap: '20px', alignItems: 'center' }}>
+                               <div style={{ width: '60px', height: '60px', background: 'rgba(255, 51, 102, 0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--error)' }}>
+                                  <ShieldAlert size={32} />
+                               </div>
+                               <div>
+                                  <div style={{ fontSize: '2rem', fontWeight: '800' }}>{fullProfile?.stats?.totalEvents || '0'}</div>
+                                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Total Audit Transactions</div>
+                               </div>
+                            </div>
+                         </div>
+
+                         {fullProfile && !fullProfile.error && (
+                            <div className="glass-panel" style={{ padding: '25px', marginTop: '2rem' }}>
+                               <h3>Shared Resources Access Summary</h3>
+                               <div className="storage-box" style={{ background: 'transparent', padding: 0 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                     <span>OneDrive Storage Utilization</span>
+                                     <span>{(fullProfile.storage.used / 1073741824).toFixed(2)} GB / {(fullProfile.storage.total / 1073741824).toFixed(0)} GB</span>
+                                  </div>
+                                  <div className="storage-bar-bg">
+                                     <div className="storage-bar-fill" style={{ width: `${(fullProfile.storage.used / fullProfile.storage.total * 100)}%` }}></div>
+                                  </div>
+                               </div>
+                            </div>
+                         )}
+
+                         <div className="glass-panel" style={{ marginTop: '2rem', padding: '25px' }}>
+                            <h3>Recent Security Pulse (Last 50 Actions)</h3>
+                            <div className="table-container">
+                               <table className="custom-table" style={{ width: '100%' }}>
+                                  <thead>
+                                     <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                        <th>DateTime</th>
+                                        <th>Action</th>
+                                        <th>Resource Path</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                     {data.filter(d => d.UserId?.toLowerCase() === selectedUserIntel.toLowerCase()).slice(0, 10).map((log, i) => (
+                                        <tr key={i}>
+                                           <td>{new Date(log.CreationTime).toLocaleString()}</td>
+                                           <td><span style={{ color: 'var(--primary)' }}>{log.Operation}</span></td>
+                                           <td style={{ fontSize: '0.8rem', opacity: 0.8 }}>{log.ObjectId?.split('/').pop()}</td>
+                                        </tr>
+                                     ))}
+                                  </tbody>
+                               </table>
+                            </div>
+                         </div>
+                      </div>
+                   ) : (
+                      <div className="glass-panel" style={{ height: '100%', display: 'flex', flexWrap: 'wrap', placeContent: 'center', textAlign: 'center', opacity: 0.5 }}>
+                         <div>
+                            <Users size={64} style={{ marginBottom: '1rem' }} />
+                            <h2>Select a user to analyze intelligence</h2>
+                            <p>Real-time file access and OneDrive permissions will be calculated upon selection.</p>
+                         </div>
+                      </div>
+                   )}
+                </div>
+              </div>
+            )}
+
+            {selectedUser && activeTab !== 'users' && (
                 <div className="modal-overlay" onClick={() => setSelectedUser(null)}>
                   <div className="modal-content glass-panel profile-modal" onClick={e => e.stopPropagation()}>
                     <div className="profile-header">
@@ -596,31 +865,91 @@ function App() {
       </AuthenticatedTemplate>
 
       <UnauthenticatedTemplate>
-        <div className="login-container glass-panel">
-          <div className="login-art">
-            <LayoutDashboard size={64} color="var(--primary)" />
-          </div>
-          <h2>LDP Logistics</h2>
-          <h1>Data Governance Portal</h1>
-          <p>Enterprise File Tracking & Audit Governance System</p>
-          <button className="login-btn" onClick={handleLogin} disabled={inProgress !== "none"}>
-            <LogIn size={20} />
-            {inProgress !== "none" ? "Authentication in Progress..." : "Login with Microsoft"}
-          </button>
+        <div className="login-page-wrapper">
+          {/* Animated background orbs */}
+          <div className="login-orb login-orb-1" />
+          <div className="login-orb login-orb-2" />
+          <div className="login-orb login-orb-3" />
 
-          {authError && (
-            <div className="error-box" style={{ marginTop: '1.5rem', fontSize: '0.85rem' }}>
-              <ShieldAlert size={20} />
-              <div>
-                <strong>Security Verification Failed:</strong>
-                <p style={{ margin: '5px 0' }}>{authError}</p>
-                <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>Check Azure "Single-page application" Platform configuration.</p>
+          {/* Grid overlay */}
+          <div className="login-grid-overlay" />
+
+          <div className="login-card-outer">
+            {/* Left branding panel */}
+            <div className="login-brand-panel">
+              <div className="login-brand-logo">
+                <img src="/ldp-logo.png" alt="LDP Logistics" style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+              </div>
+              <div className="login-brand-tag">LDP LOGISTICS</div>
+              <h1 className="login-brand-title">Data Governance<br/>Command Portal</h1>
+              <p className="login-brand-sub">Enterprise-grade Microsoft 365 audit intelligence, real-time file tracking, and insider threat detection — all in one terminal.</p>
+
+              <div className="login-brand-stats">
+                <div className="login-stat">
+                  <span className="login-stat-val">4,800+</span>
+                  <span className="login-stat-label">Events Tracked</span>
+                </div>
+                <div className="login-stat-divider"/>
+                <div className="login-stat">
+                  <span className="login-stat-val">42</span>
+                  <span className="login-stat-label">Active Users</span>
+                </div>
+                <div className="login-stat-divider"/>
+                <div className="login-stat">
+                  <span className="login-stat-val">Live</span>
+                  <span className="login-stat-label">Real-time Sync</span>
+                </div>
               </div>
             </div>
-          )}
-          <div className="login-footer">
-            <ShieldAlert size={14} />
-            Restricted to Authorized Admin Personnel Only
+
+            {/* Right login panel */}
+            <div className="login-form-panel">
+              <div className="login-form-inner">
+                <div className="login-ms-badge">
+                  <svg width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+                  <span>Microsoft Entra ID</span>
+                </div>
+
+                <h2 className="login-form-title">Welcome back</h2>
+                <p className="login-form-sub">Sign in with your organizational account to access the security terminal.</p>
+
+                <button
+                  id="login-btn-microsoft"
+                  onClick={handleLogin}
+                  disabled={inProgress !== "none"}
+                  className="login-ms-btn"
+                >
+                  {inProgress !== "none" ? (
+                    <>
+                      <span className="login-spinner"/>
+                      Authenticating...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+                      Login with Microsoft
+                    </>
+                  )}
+                </button>
+
+                {authError && (
+                  <div className="login-error-box">
+                    <ShieldAlert size={16}/>
+                    <span>{authError}</span>
+                  </div>
+                )}
+
+                <div className="login-divider"><span>secured by</span></div>
+
+                <div className="login-security-pills">
+                  <span className="login-sec-pill"><Lock size={11}/> Zero Trust</span>
+                  <span className="login-sec-pill"><ShieldAlert size={11}/> MFA Enforced</span>
+                  <span className="login-sec-pill"><Activity size={11}/> Audit Logged</span>
+                </div>
+
+                <p className="login-footer-note">Restricted to authorized LDP Logistics IT personnel only. All access is monitored and recorded.</p>
+              </div>
+            </div>
           </div>
         </div>
       </UnauthenticatedTemplate>
