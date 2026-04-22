@@ -1,30 +1,44 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
 
  :root {
-  /* Enterprise Risk Dashboard - Cyan Electric Palette */
+  /* Professional Data Governance Palette - Microsoft Inspired */
   --bg-main: #000c17;
   --bg-sidebar: #001529;
   --bg-card: #001f3f;
-  --bg-header: #00f2ff; /* Electric Cyan */
-  --primary: #00f2ff;
-  --primary-glow: rgba(0, 242, 255, 0.3);
-  --secondary: #00d2ff;
+  --bg-header: #001529;
+  --primary: #0078D4; /* Microsoft Azure Blue */
+  --primary-glow: rgba(0, 120, 212, 0.3);
+  --secondary: #10b981; /* Emerald Green Accent */
+  --secondary-glow: rgba(16, 185, 129, 0.3);
   --text-main: #ffffff;
   --text-muted: #8c8c8c;
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-bg: #001529;
-  --success: #52c41a;
-  --warning: #faad14;
-  --error: #f5222d;
-  --accent-orange: #ff4d4f;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --accent-orange: #f97316;
   /* Heat Map Tokens */
-  --heat-severe: #ff4d4f;
-  --heat-major: #faad14;
+  --heat-severe: #ef4444;
+  --heat-major: #f59e0b;
   --heat-moderate: #d4b106;
-  --heat-minor: #52c41a;
-  --heat-insignificant: #237804;
+  --heat-minor: #10b981;
+  --heat-insignificant: #065f46;
   --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-  --header-height: 56px;
+  --header-height: 64px;
+}
+
+body.light-mode {
+  --bg-main: #f3f4f6;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-header: #ffffff;
+  --text-main: #111827;
+  --text-muted: #4b5563;
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-bg: #ffffff;
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --primary-glow: rgba(0, 120, 212, 0.1);
 }
 
 body {

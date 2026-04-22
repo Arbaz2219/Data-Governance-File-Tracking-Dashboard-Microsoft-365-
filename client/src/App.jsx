@@ -373,6 +373,12 @@ function App() {
   const [activeCalls, setActiveCalls] = useState([]);
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+    document.body.classList.toggle('light-mode');
+  };
 
   const isAuthorized = accounts[0]?.username?.toLowerCase().endsWith('@ldplogistics.com');
 
@@ -622,11 +628,15 @@ function App() {
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
               <SystemClock />
-              <div className="top-icons" style={{ display: 'flex', gap: '15px', color: '#fff', opacity: 0.8 }}>
-                <Activity size={18} style={{ cursor: 'pointer' }} />
-                <FileText size={18} style={{ cursor: 'pointer' }} />
-                <Globe size={18} style={{ cursor: 'pointer' }} />
-              </div>
+               <div className="top-icons" style={{ display: 'flex', gap: '15px', color: 'var(--text-main)', opacity: 0.8 }}>
+                 {isDarkMode ? (
+                   <Globe size={18} style={{ cursor: 'pointer' }} onClick={toggleTheme} title="Switch to Light Mode" />
+                 ) : (
+                   <Laptop size={18} style={{ cursor: 'pointer' }} onClick={toggleTheme} title="Switch to Dark Mode" />
+                 )}
+                 <Activity size={18} style={{ cursor: 'pointer' }} />
+                 <FileText size={18} style={{ cursor: 'pointer' }} />
+               </div>
               
               <div className="profile-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: '4px' }}>
                 <div style={{ width: '24px', height: '24px', background: '#004578', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
