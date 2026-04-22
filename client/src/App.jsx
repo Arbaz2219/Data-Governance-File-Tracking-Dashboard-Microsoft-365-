@@ -373,11 +373,11 @@ function App() {
   const [activeCalls, setActiveCalls] = useState([]);
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
-    document.body.classList.toggle('light-mode');
+    document.body.classList.toggle('dark-mode');
   };
 
   const AUTHORIZED_EMAILS = [
@@ -1003,7 +1003,7 @@ function App() {
       </AuthenticatedTemplate>
 
       <UnauthenticatedTemplate>
-        <div className="login-page-wrapper">
+        <div className="login-page-wrapper dark-theme-override">
           {/* Animated background orbs */}
           <div className="login-orb login-orb-1" />
           <div className="login-orb login-orb-2" />
