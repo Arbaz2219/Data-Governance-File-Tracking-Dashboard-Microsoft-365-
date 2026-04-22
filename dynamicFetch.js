@@ -271,7 +271,7 @@ function calculateUserRisk() {
         webLogs.forEach(entry => {
             const user = entry.InitiatingProcessAccountName;
             if (!user || user === 'Unknown User') return;
-            if (!riskProfiles[user]) riskProfiles[user] = { score: 0, flags: [], events: 0 };
+            if (!riskProfiles[user]) riskProfiles[user] = { score: 0, flags: [], events: 0, files: new Set() };
             
             const category = categorizeUrl(entry.RemoteUrl);
             if (category !== 'Authorized / Standard') {
