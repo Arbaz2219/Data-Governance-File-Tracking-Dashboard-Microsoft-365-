@@ -470,17 +470,27 @@ function App() {
     );
   }, [webActivity, searchTerm]);
 
+  // CLEAN CONSOLIDATED POLLING SYSTEM
   useEffect(() => {
     if (accounts.length > 0) {
+      // Initial load
       fetchData();
       fetchWebActivity();
+      fetchActiveCalls();
+      fetchSecurityInsights();
+      
       const interval = setInterval(() => {
-        fetchData();
+        fetchData(); // Always refresh main dashboard feed
+        
+        // Context-aware background refreshing
         if (activeTab === 'web') fetchWebActivity();
-      }, 3000); 
+        if (activeTab === 'comms') fetchActiveCalls();
+        if (activeTab === 'shadow' || activeTab === 'behavior') fetchSecurityInsights();
+      }, 5000); 
+      
       return () => clearInterval(interval);
     }
-  }, [accounts]);
+  }, [accounts, activeTab]);
 
   const fetchActiveCalls = async () => {
     try {
@@ -504,22 +514,6 @@ function App() {
       if (riskRes.ok) setRiskStats(await riskRes.json());
     } catch (err) { console.error("Insights fetch error:", err); }
   };
-
-  useEffect(() => {
-    if (accounts.length > 0) {
-      fetchData();
-      fetchWebActivity();
-      fetchActiveCalls();
-      fetchSecurityInsights();
-      const interval = setInterval(() => {
-        fetchData();
-        if (activeTab === 'web') fetchWebActivity();
-        if (activeTab === 'comms') fetchActiveCalls();
-        if (activeTab === 'shadow' || activeTab === 'behavior') fetchSecurityInsights();
-      }, 5000); 
-      return () => clearInterval(interval);
-    }
-  }, [accounts, activeTab]);
 
   useEffect(() => {
     if (accounts.length > 0) {
