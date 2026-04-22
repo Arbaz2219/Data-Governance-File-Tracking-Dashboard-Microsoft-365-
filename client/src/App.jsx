@@ -786,7 +786,29 @@ function App() {
                          )}
 
                          <div className="glass-panel" style={{ marginTop: '2rem', padding: '25px' }}>
-                            <h3>Recent Security Pulse (Last 50 Actions)</h3>
+                                                                                      <h3>📂 Accessed File Inventory (Unique)</h3>
+                             <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '2rem' }}>
+                                <table className="custom-table" style={{ width: '100%', fontSize: '0.8rem' }}>
+                                   <thead>
+                                      <tr style={{ textAlign: 'left', color: 'var(--text-muted)' }}>
+                                         <th>File Resource</th>
+                                         <th>Last Interaction</th>
+                                      </tr>
+                                   </thead>
+                                   <tbody>
+                                      {Array.from(new Map(data.filter(d => d.UserId?.toLowerCase() === selectedUserIntel.toLowerCase()).map(d => [d.ObjectId, d])).values()).map((log, i) => (
+                                         <tr key={i}>
+                                            <td style={{ fontWeight: '600' }}>{log.ObjectId?.split('/').pop()}</td>
+                                            <td style={{ opacity: 0.6 }}>{new Date(log.CreationTime).toLocaleDateString()}</td>
+                                         </tr>
+                                      ))}
+                                   </tbody>
+                                </table>
+                             </div>
+
+                             <h3>⚡ Real-Time Security Pulse</h3>
+
+
                             <div className="table-container">
                                <table className="custom-table" style={{ width: '100%' }}>
                                   <thead>
@@ -831,6 +853,26 @@ function App() {
                      </h2>
                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         Aggregated from last 24h M365 Audit Logs
+                     </div>
+                  </div>
+
+                  {/* Summary Metrics Cards for Clarity */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #ef4444' }}>
+                        <div style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>High Risk Profiles</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.filter(s => s.level === 'Critical').length}</div>
+                     </div>
+                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #3b82f6' }}>
+                        <div style={{ color: '#3b82f6', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>Active Monitoring</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.length} Users</div>
+                     </div>
+                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #10b981' }}>
+                        <div style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>Files Shielded</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.reduce((acc, s) => acc + s.fileCount, 0)}</div>
+                     </div>
+                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
+                        <div style={{ color: '#f59e0b', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>Security Alerts</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.reduce((acc, s) => acc + s.flags.length, 0)}</div>
                      </div>
                   </div>
 
