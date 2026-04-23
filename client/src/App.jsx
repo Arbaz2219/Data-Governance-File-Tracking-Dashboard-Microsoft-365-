@@ -282,19 +282,6 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
 
       {/* ROW 3: Targets */}
       <div className="targets-row">
-        <div className="glass-panel chart-panel">
-          <h2 style={{ background: '#00f2ff', color: '#000' }}>#Risks &gt;= threshold: top 5 vulnerabilities</h2>
-          <div style={{ flex: 1, padding: '20px' }}>
-             <ResponsiveContainer width="100%" height={200}>
-              <BarChart layout="vertical" data={vulnsData}>
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" stroke="#fff" fontSize={10} width={120} />
-                <Tooltip contentStyle={{ background: '#001529', border: '1px solid #ff4d4f' }} />
-                <Bar dataKey="count" fill="#ff4d4f" radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-             </ResponsiveContainer>
-          </div>
-        </div>
 
         <div className="glass-panel chart-panel">
           <h2 style={{ background: '#00f2ff', color: '#000' }}># Risks &gt;= threshold: top 5 entities</h2>
@@ -776,22 +763,6 @@ function App() {
 
                   {/* BOTTOM ROW CHARTS */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                    <div className="glass-panel" style={{ padding: '20px' }}>
-                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Top 5 Vulnerabilities</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {['Data Leakage', 'Unauthorized Access', 'Shadow IT Sprawl', 'Legacy Systems', 'Phishing Links'].map((v, i) => (
-                          <div key={v}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '5px' }}>
-                              <span>{v}</span>
-                              <span style={{ color: 'var(--secondary)' }}>{95 - (i * 15)}%</span>
-                            </div>
-                            <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
-                              <div style={{ width: `${95 - (i * 15)}%`, height: '100%', background: 'var(--secondary)', borderRadius: '4px', boxShadow: '0 0 10px var(--secondary-glow)' }}></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
 
                     <div className="glass-panel" style={{ padding: '20px' }}>
                       <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Top 5 Entities</h3>
