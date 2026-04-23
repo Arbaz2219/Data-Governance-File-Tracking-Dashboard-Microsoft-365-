@@ -701,10 +701,6 @@ function App() {
             <h2>LDP LOGISTICS</h2>
           </div>
           
-          <nav className="nav-menu">
-            <div className="nav-label" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.75rem', paddingLeft: '1.5rem', letterSpacing: '1.5px' }}>Terminal Menu</div>
-            <div 
-              className={`nav-item ${activeTab === 'feed' ? 'active' : ''}`} 
           <div className="sidebar-nav">
             <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={18} /> Overview</button>
             <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}><Users size={18} /> User Intelligence</button>
