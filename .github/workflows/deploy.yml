@@ -39,6 +39,7 @@ jobs:
           context: ./client
           file: ./client/Dockerfile
           push: true
+          no-cache: true
           build-args: |
             VITE_API_URL=${{ secrets.VITE_API_URL }}
           tags: arbazm221/ldp_frontend:latest
@@ -56,19 +57,17 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
-            echo "Navigating to project directory..."
+            echo "🚀 STAGING: Starting Production Update Flow..."
             cd /root/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
 
-            echo "CLEANING: Stopping and removing old containers..."
+            echo "📥 PULLING: Fetching latest images from Docker Hub..."
+            sudo docker pull arbazm221/ldp_backend:latest
+            sudo docker pull arbazm221/ldp_frontend:latest
+
+            echo "🧹 CLEANING: Removing old containers..."
             sudo docker-compose --env-file .env.prod down
 
-            echo "CLEANING: Pruning everything to force clean layers..."
-            sudo docker system prune -f
-
-            echo "PULLING: Fetching latest images from Hub..."
-            sudo docker-compose --env-file .env.prod pull
-
-            echo "RESTARTING: Starting services..."
+            echo "🏗️ RESTARTING: Starting fresh services..."
             sudo docker-compose --env-file .env.prod up -d
 
-            echo "✅ Force Deployment Successful!"
+            echo "✅ SUCCESS: Production Dashboard Updated!"
