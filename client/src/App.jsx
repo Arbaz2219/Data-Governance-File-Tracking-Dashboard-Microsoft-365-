@@ -447,6 +447,30 @@ function App() {
     return Object.keys(counts).map(h => ({ hour: `${h}:00`, events: counts[h] })).sort((a,b) => parseInt(a.hour) - parseInt(b.hour));
   }, [data]);
 
+  const userIntelligenceSummary = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    const stats = {};
+    data.forEach(log => {
+        const userId = log.UserId?.toLowerCase();
+        if (!userId || userId.includes('app@sharepoint')) return;
+        if (!stats[userId]) {
+            stats[userId] = {
+                id: userId,
+                files: new Set(),
+                actions: 0,
+                lastSeen: log.CreationTime,
+                workload: log.Workload
+            };
+        }
+        stats[userId].actions++;
+        if (log.ObjectId) stats[userId].files.add(log.ObjectId);
+        if (new Date(log.CreationTime) > new Date(stats[userId].lastSeen)) {
+            stats[userId].lastSeen = log.CreationTime;
+        }
+    });
+    return Object.values(stats).sort((a, b) => b.actions - a.actions);
+  }, [data]);
+
   const fetchWebActivity = async () => {
     try {
       const response = await fetch(`${API_BASE}/api/security/web-activity`, {
@@ -795,47 +819,85 @@ function App() {
 
 
             {activeTab === 'users' && (
-              <div className="user-intelligence-container" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', height: 'calc(100vh - 160px)' }}>
-                {/* User List Sidebar */}
-                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                   <div style={{ padding: '20px' }}>
-                      <h3 style={{ margin: '0 0 15px 0' }}>Employee Directory</h3>
-                      <input 
-                        type="text" 
-                        placeholder="Search users..." 
-                        style={{ width: '100%', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: '#fff' }}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
+              <div className="user-intelligence-container" style={{ animation: 'fadeIn 0.3s ease' }}>
+                {!selectedUserIntel ? (
+                   <div className="glass-panel" style={{ padding: '30px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                         <div>
+                            <h2 style={{ margin: 0 }}>Employee Intelligence Overview</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Comprehensive monitoring of all active M365 identities</p>
+                         </div>
+                         <input 
+                            type="text" 
+                            placeholder="Search employees..." 
+                            className="search-input"
+                            style={{ width: '300px' }}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                         />
+                      </div>
+                      
+                      <div style={{ overflowX: 'auto' }}>
+                         <table className="custom-table" style={{ width: '100%' }}>
+                            <thead>
+                               <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                  <th>Employee</th>
+                                  <th>Action Count</th>
+                                  <th>Files Accessed</th>
+                                  <th>Last Interaction</th>
+                                  <th>Security Status</th>
+                                  <th>Action</th>
+                               </tr>
+                            </thead>
+                            <tbody>
+                               {userIntelligenceSummary.filter(u => u.id.includes(searchTerm.toLowerCase())).map((u, i) => (
+                                  <tr key={i}>
+                                     <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                           <div style={{ width: '36px', height: '36px', background: 'rgba(0, 245, 212, 0.1)', border: '1px solid var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: '800' }}>
+                                              {u.id[0].toUpperCase()}
+                                           </div>
+                                           <div>
+                                              <div style={{ fontWeight: '700' }}>{u.id.split('@')[0]}</div>
+                                              <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{u.id}</div>
+                                           </div>
+                                        </div>
+                                     </td>
+                                     <td><span style={{ fontWeight: '700', color: 'var(--primary)' }}>{u.actions}</span></td>
+                                     <td><span style={{ fontWeight: '700' }}>{u.files.size}</span></td>
+                                     <td style={{ fontSize: '0.8rem', opacity: 0.8 }}>{new Date(u.lastSeen).toLocaleString()}</td>
+                                     <td>
+                                        <span style={{ padding: '4px 10px', background: 'rgba(6, 214, 160, 0.1)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>MONITORED</span>
+                                     </td>
+                                     <td>
+                                        <button 
+                                           className="tab-btn" 
+                                           style={{ padding: '6px 12px', background: 'var(--primary)', color: '#000' }}
+                                           onClick={() => {
+                                              setSelectedUserIntel(u.id);
+                                              handleUserClick(u.id);
+                                           }}
+                                        >
+                                           Investigate
+                                        </button>
+                                     </td>
+                                  </tr>
+                               ))}
+                            </tbody>
+                         </table>
+                      </div>
                    </div>
-                   <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 20px' }}>
-                      {usersList.filter(u => u.toLowerCase().includes(searchTerm.toLowerCase())).map(user => (
-                        <div 
-                          key={user}
-                          className={`nav-item ${selectedUserIntel === user ? 'active' : ''}`}
-                          style={{ marginBottom: '5px', padding: '12px' }}
-                          onClick={() => {
-                            setSelectedUserIntel(user);
-                            handleUserClick(user); // Also trigger the existing profile fetch
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                             <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
-                                {user[0].toUpperCase()}
-                             </div>
-                             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{user.split('@')[0]}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user}</div>
-                             </div>
-                          </div>
-                        </div>
-                      ))}
-                   </div>
-                </div>
-
-                {/* User Detail Content */}
-                <div style={{ height: '100%', overflowY: 'auto' }}>
-                   {selectedUserIntel ? (
-                      <div style={{ animation: 'fadeIn 0.5s ease' }}>
+                ) : (
+                   <div style={{ animation: 'fadeIn 0.5s ease' }}>
+                      <div style={{ marginBottom: '1.5rem' }}>
+                         <button 
+                            className="tab-btn" 
+                            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}
+                            onClick={() => setSelectedUserIntel(null)}
+                         >
+                            ← Back to Overview
+                         </button>
+                      </div>
+                      <div style={{ height: 'calc(100vh - 220px)', overflowY: 'auto' }}>
                          <div className="glass-panel" style={{ padding: '30px', marginBottom: '2rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                <div>
@@ -934,17 +996,9 @@ function App() {
                                </table>
                             </div>
                          </div>
-                      </div>
-                   ) : (
-                      <div className="glass-panel" style={{ height: '100%', display: 'flex', flexWrap: 'wrap', placeContent: 'center', textAlign: 'center', opacity: 0.5 }}>
-                         <div>
-                            <Users size={64} style={{ marginBottom: '1rem' }} />
-                            <h2>Select a user to analyze intelligence</h2>
-                            <p>Real-time file access and OneDrive permissions will be calculated upon selection.</p>
-                         </div>
-                      </div>
-                   )}
-                </div>
+                       </div>
+                    </div>
+                 )}
               </div>
             )}
 
