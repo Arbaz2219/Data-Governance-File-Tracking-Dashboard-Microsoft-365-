@@ -1,6 +1,6 @@
 // v1.0.2 - Forcing clean build to resolve potential cache issues
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, User as UserIcon, ShieldAlert, Laptop, Globe, Lock, Shield } from 'lucide-react';
+import { Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, User as UserIcon, ShieldAlert, Laptop, Globe, Lock, Shield, Settings, UserPlus, UserMinus, ShieldCheck, ShieldX, Search, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { ResponsiveSankey } from '@nivo/sankey';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { useMsal, AuthenticatedTemplate, UnauthenticatedTemplate } from "@azure/msal-react";
@@ -344,8 +344,93 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
   );
 });
 
+const AdminPortal = ({ authorizedUsers, fetchAuthList, API_BASE }) => {
+  const [newEmail, setNewEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAdd = async () => {
+    if (!newEmail.includes('@')) return alert("Invalid Email");
+    setLoading(true);
+    try {
+      await fetch(`${API_BASE}/api/admin/authorized-users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' },
+        body: JSON.stringify({ email: newEmail.toLowerCase() })
+      });
+      setNewEmail('');
+      await fetchAuthList();
+    } finally { setLoading(false); }
+  };
+
+  const handleRemove = async (email) => {
+    if (!window.confirm(`Revoke access for ${email}?`)) return;
+    setLoading(true);
+    try {
+      await fetch(`${API_BASE}/api/admin/authorized-users`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' },
+        body: JSON.stringify({ email: email.toLowerCase() })
+      });
+      await fetchAuthList();
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="admin-portal-container">
+      <div className="glass-panel" style={{ padding: '30px', maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
+          <ShieldCheck size={32} color="var(--secondary)" />
+          <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Access Control Terminal</h2>
+        </div>
+
+        <div className="add-user-form" style={{ display: 'flex', gap: '10px', marginBottom: '40px' }}>
+          <input 
+            type="email" 
+            placeholder="Enter Corporate Email to Authorize..." 
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+          />
+          <button 
+            onClick={handleAdd} 
+            disabled={loading}
+            style={{ padding: '0 25px', background: 'var(--secondary)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <UserPlus size={18} /> {loading ? 'Processing...' : 'Grant Access'}
+          </button>
+        </div>
+
+        <div className="users-auth-list">
+          <h3 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '15px' }}>Currently Authorized Identities</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {authorizedUsers.map(email => (
+              <div key={email} className="auth-user-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: email === 'kundan@ldplogistics.com' ? 'var(--secondary)' : 'var(--success)' }}></div>
+                  <span>{email}</span>
+                  {email === 'kundan@ldplogistics.com' && <span style={{ fontSize: '0.6rem', background: 'var(--secondary)', color: '#000', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>SUPER ADMIN</span>}
+                </div>
+                {email !== 'kundan@ldplogistics.com' && (
+                  <button onClick={() => handleRemove(email)} className="revoke-btn" style={{ background: 'transparent', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: '5px' }}>
+                    <Trash2 size={18} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const { instance, accounts, inProgress } = useMsal();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [authorizedUsers, setAuthorizedUsers] = useState([]);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [newAuthEmail, setNewAuthEmail] = useState('');
+  const [adminStatus, setAdminStatus] = useState({ isSuperAdmin: false, isAuthorized: false });
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -360,19 +445,33 @@ function App() {
   const [activeCalls, setActiveCalls] = useState([]);
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const SUPER_ADMIN = 'kundan@ldplogistics.com';
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     document.body.classList.toggle('dark-mode');
   };
 
-  const AUTHORIZED_EMAILS = [
-    'kundan@ldplogistics.com',
-    'help-desk@ldplogistics.com'
-  ];
-
-  const isAuthorized = AUTHORIZED_EMAILS.includes(accounts[0]?.username?.toLowerCase());
+  const fetchAuthList = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/authorized-users`, {
+        headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' }
+      });
+      const list = await response.json();
+      setAuthorizedUsers(list);
+      
+      const email = accounts[0]?.username?.toLowerCase();
+      setAdminStatus({
+        isSuperAdmin: email === SUPER_ADMIN,
+        isAuthorized: list.includes(email) || email === SUPER_ADMIN
+      });
+    } catch (e) {
+      console.error("Auth sync failed");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (accounts.length > 0) {
@@ -481,9 +580,15 @@ function App() {
     );
   }, [webActivity, searchTerm]);
 
-  // CLEAN CONSOLIDATED POLLING SYSTEM
   useEffect(() => {
     if (accounts.length > 0) {
+      fetchAuthList();
+    }
+  }, [accounts]);
+
+  // CLEAN CONSOLIDATED POLLING SYSTEM
+  useEffect(() => {
+    if (accounts.length > 0 && adminStatus.isAuthorized) {
       // Initial load
       fetchData();
       fetchWebActivity();
@@ -501,7 +606,7 @@ function App() {
       
       return () => clearInterval(interval);
     }
-  }, [accounts, activeTab]);
+  }, [accounts, activeTab, adminStatus.isAuthorized]);
 
   const fetchActiveCalls = async () => {
     try {
@@ -600,99 +705,49 @@ function App() {
             <div className="nav-label" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.75rem', paddingLeft: '1.5rem', letterSpacing: '1.5px' }}>Terminal Menu</div>
             <div 
               className={`nav-item ${activeTab === 'feed' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('feed')}
-            >
-              <LayoutDashboard size={20} /> Dashboard
-            </div>
-            <div 
-              className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('users')}
-            >
-              <Users size={20} /> User Intelligence
-            </div>
-            <div 
-              className={`nav-item ${activeTab === 'behavior' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('behavior')}
-            >
-              <Activity size={20} /> User Behavior
-            </div>
-            <div 
-              className={`nav-item ${activeTab === 'intelligence' ? 'active' : ''}`} 
-              onClick={() => setActiveTab('intelligence')}
-            >
-              <Shield size={20} /> Risk Intelligence
-            </div>
-
+          <div className="sidebar-nav">
+            <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={18} /> Overview</button>
+            <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}><Users size={18} /> User Intelligence</button>
+            <button className={`nav-item ${activeTab === 'behavior' ? 'active' : ''}`} onClick={() => setActiveTab('behavior')}><ShieldAlert size={18} /> Security Pulse</button>
+            <button className={`nav-item ${activeTab === 'comms' ? 'active' : ''}`} onClick={() => setActiveTab('comms')}><Activity size={18} /> Comms Intel</button>
+            <button className={`nav-item ${activeTab === 'web' ? 'active' : ''}`} onClick={() => setActiveTab('web')}><Globe size={18} /> Web Activity</button>
+            <button className={`nav-item ${activeTab === 'shadow' ? 'active' : ''}`} onClick={() => setActiveTab('shadow')}><Shield size={18} /> Shadow IT</button>
             
-          </nav>
-
+            {adminStatus.isSuperAdmin && (
+              <button 
+                className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} 
+                onClick={() => setActiveTab('admin')} 
+                style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px', color: 'var(--secondary)' }}
+              >
+                <Settings size={18} /> Admin Portal
+              </button>
+            )}
+          </div>
         </aside>
 
-        <main className="main-content" style={{ padding: 0 }}>
-          <header className="topbar">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-               <span style={{ fontWeight: '600', fontSize: '1rem' }}>Data Governance Dashboard</span>
-               <div className="search-bar-wrapper" style={{ position: 'relative', width: '400px' }}>
-                  <input 
-                     type="text" 
-                     placeholder="Search resources, users, and logs (G+/)" 
-                     value={searchTerm}
-                     onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-               </div>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <SystemClock />
-               <div className="top-icons" style={{ display: 'flex', gap: '15px', color: 'var(--text-main)', opacity: 0.8 }}>
-                 {isDarkMode ? (
-                   <Globe size={18} style={{ cursor: 'pointer' }} onClick={toggleTheme} title="Switch to Light Mode" />
-                 ) : (
-                   <Laptop size={18} style={{ cursor: 'pointer' }} onClick={toggleTheme} title="Switch to Dark Mode" />
-                 )}
-                 <Activity size={18} style={{ cursor: 'pointer' }} />
-                 <FileText size={18} style={{ cursor: 'pointer' }} />
-               </div>
-              
-              <div className="profile-pill" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: '4px' }}>
-                <div style={{ width: '24px', height: '24px', background: '#004578', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <UserIcon size={14} color="#fff" />
+          <main className="dashboard-main">
+            {/* Header Content */}
+            <div className="top-header">
+              <div className="system-status">
+                <div className="status-dot online"></div>
+                <span style={{ color: 'var(--success)', fontWeight: '800', fontSize: '0.7rem' }}>SECURE CONNECTION ACTIVE</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div className="user-pill">
+                  <UserIcon size={14} />
+                  <span>{accounts[0]?.name?.split(' ')[0]} {adminStatus.isSuperAdmin ? '(ADMIN)' : ''}</span>
                 </div>
-                <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>{accounts[0]?.name?.split(' ')[0]}</span>
+                <SystemClock />
+                <button onClick={() => instance.logoutRedirect()} className="logout-icon-btn" title="Secure Logout">
+                  <LogIn size={20} />
+                </button>
               </div>
-              
-              <button 
-                onClick={() => instance.logoutRedirect()}
-                style={{ background: 'rgba(255, 255, 255, 0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '2px', fontWeight: '600', cursor: 'pointer', fontSize: '0.75rem' }}
-              >
-                Sign out
-              </button>
             </div>
-          </header>
 
-          {!isAuthorized ? (
-            <div className="glass-panel" style={{ padding: '5rem', textAlign: 'center' }}>
-               <ShieldAlert size={64} color="var(--error)" style={{ marginBottom: '1.5rem' }} />
-               <h2 style={{ color: 'var(--text-main)', fontSize: '2rem' }}>Access Denied</h2>
-               <p style={{ color: 'var(--text-muted)', margin: '1rem 0' }}>This terminal is restricted to authorized Security Personnel only.</p>
-               <p style={{ color: 'var(--error)', fontWeight: 'bold' }}>Contact the Head of IT to request access for {accounts[0]?.username}.</p>
-            </div>
-          ) : loading ? (
-            <div style={{ padding: '20px' }}>
-              <div className="metrics-grid">
-                <Skeleton width="100%" height="120px" borderRadius="16px" />
-                <Skeleton width="100%" height="120px" borderRadius="16px" />
-                <Skeleton width="100%" height="120px" borderRadius="16px" />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '20px' }}>
-                <Skeleton width="100%" height="400px" borderRadius="16px" />
-                <Skeleton width="100%" height="400px" borderRadius="16px" />
-              </div>
-            </div>
-          ) : (
+            {/* TAB RENDERING LOGIC */}
             <>
-              {activeTab === 'feed' && (
-                <div style={{ padding: '20px' }}>
+              {activeTab === 'dashboard' && (
+                <div className="dashboard-content">
                   {/* TOP KPI CARDS */}
                   <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--primary)' }}>
@@ -757,37 +812,53 @@ function App() {
                         <div style={{ width: '160px', height: '160px', borderRadius: '50%', border: '20px solid rgba(255,255,255,0.05)', borderTopColor: 'var(--primary)', transform: 'rotate(-45deg)' }}></div>
                         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, fontSize: '1.5rem', fontWeight: '800' }}>72%</div>
                       </div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>Mitigation Tasks Completed</p>
-                    </div>
                   </div>
 
-                  {/* BOTTOM ROW CHARTS */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-
-                    <div className="glass-panel" style={{ padding: '20px' }}>
-                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Top 5 Entities</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {['Global Logistics Hub', 'Regional DC - North', 'Financial Services', 'Supply Chain API', 'External Partners'].map((v, i) => (
-                          <div key={v}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '5px' }}>
-                              <span>{v}</span>
-                              <span style={{ color: 'var(--primary)' }}>{88 - (i * 12)}%</span>
-                            </div>
-                            <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
-                              <div style={{ width: `${88 - (i * 12)}%`, height: '100%', background: 'var(--primary)', borderRadius: '4px', boxShadow: '0 0 10px var(--primary-glow)' }}></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                  {/* LIVE SECURITY FEED TABLE */}
+                  <div className="glass-panel" style={{ marginTop: '2rem', padding: '25px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ margin: 0 }}>🚨 Live Security Feed</h3>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--secondary)' }}>REAL-TIME MONITORING ACTIVE</span>
+                    </div>
+                    <div className="table-container">
+                        <table className="custom-table" style={{ width: '100%' }}>
+                            <thead>
+                                <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                    <th>Timestamp (EST)</th>
+                                    <th>Identity</th>
+                                    <th>Operation</th>
+                                    <th>Resource Path</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.slice(-15).reverse().map((log, i) => (
+                                    <tr key={i}>
+                                        <td style={{ fontSize: '0.8rem' }}>{formatNJTime(log.CreationTime)}</td>
+                                        <td style={{ fontWeight: '700' }}>{log.UserId?.split('@')[0]}</td>
+                                        <td>
+                                            <span style={{ 
+                                                padding: '4px 8px', 
+                                                background: log.Operation === 'FileDeleted' ? 'rgba(255, 77, 79, 0.1)' : 'rgba(0, 245, 212, 0.1)', 
+                                                color: log.Operation === 'FileDeleted' ? '#ff4d4f' : 'var(--primary)',
+                                                borderRadius: '4px',
+                                                fontSize: '0.7rem',
+                                                fontWeight: '800'
+                                            }}>
+                                                {log.Operation}
+                                            </span>
+                                        </td>
+                                        <td style={{ fontSize: '0.75rem', opacity: 0.8, maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {log.isSensitive && <AlertTriangle size={14} color="#ff4d4f" title="Sensitive Content" style={{ marginRight: '5px', verticalAlign: 'middle' }} />}
+                                            {log.ObjectId?.split('/').pop()}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                   </div>
                 </div>
               )}
-
-
-  
-
-
 
             {activeTab === 'users' && (
               <div className="user-intelligence-container" style={{ animation: 'fadeIn 0.3s ease' }}>
@@ -812,10 +883,10 @@ function App() {
                             <thead>
                                <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                                   <th>Employee</th>
+                                  <th>Risk Level</th>
+                                  <th>Sensitivity</th>
                                   <th>Action Count</th>
                                   <th>Files Accessed</th>
-                                  <th>Last Interaction</th>
-                                  <th>Security Status</th>
                                   <th>Action</th>
                                </tr>
                             </thead>
@@ -833,12 +904,29 @@ function App() {
                                            </div>
                                         </div>
                                      </td>
+                                     <td>
+                                        <span style={{ 
+                                            padding: '4px 10px', 
+                                            borderRadius: '4px', 
+                                            fontSize: '0.7rem', 
+                                            fontWeight: '800',
+                                            background: riskStats.find(r => r.user.toLowerCase() === u.id.toLowerCase())?.level === 'Critical' ? 'rgba(245, 34, 45, 0.1)' : 'rgba(0, 245, 212, 0.1)',
+                                            color: riskStats.find(r => r.user.toLowerCase() === u.id.toLowerCase())?.level === 'Critical' ? '#ff4d4f' : 'var(--primary)'
+                                        }}>
+                                            {riskStats.find(r => r.user.toLowerCase() === u.id.toLowerCase())?.level || 'LOW'}
+                                        </span>
+                                     </td>
+                                     <td>
+                                        {data.some(d => d.UserId?.toLowerCase() === u.id.toLowerCase() && d.isSensitive) ? (
+                                           <span style={{ color: '#ff4d4f', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
+                                              <AlertTriangle size={12} /> SENSITIVE
+                                           </span>
+                                        ) : (
+                                           <span style={{ color: 'var(--success)', fontSize: '0.7rem', fontWeight: '800' }}>SECURE</span>
+                                        )}
+                                     </td>
                                      <td><span style={{ fontWeight: '700', color: 'var(--primary)' }}>{u.actions}</span></td>
                                      <td><span style={{ fontWeight: '700' }}>{u.files.size}</span></td>
-                                     <td style={{ fontSize: '0.8rem', opacity: 0.8 }}>{new Date(u.lastSeen).toLocaleString()}</td>
-                                     <td>
-                                        <span style={{ padding: '4px 10px', background: 'rgba(6, 214, 160, 0.1)', color: 'var(--success)', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>MONITORED</span>
-                                     </td>
                                      <td>
                                         <button 
                                            className="tab-btn" 
@@ -921,52 +1009,6 @@ function App() {
                                </div>
                             </div>
                          )}
-
-                         <div className="glass-panel" style={{ marginTop: '2rem', padding: '25px' }}>
-                                                                                      <h3>📂 Accessed File Inventory (Unique)</h3>
-                             <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '2rem' }}>
-                                <table className="custom-table" style={{ width: '100%', fontSize: '0.8rem' }}>
-                                   <thead>
-                                      <tr style={{ textAlign: 'left', color: 'var(--text-muted)' }}>
-                                         <th>File Resource</th>
-                                         <th>Last Interaction</th>
-                                      </tr>
-                                   </thead>
-                                   <tbody>
-                                      {Array.from(new Map(data.filter(d => d.UserId?.toLowerCase() === selectedUserIntel.toLowerCase()).map(d => [d.ObjectId, d])).values()).map((log, i) => (
-                                         <tr key={i}>
-                                            <td style={{ fontWeight: '600' }}>{log.ObjectId?.split('/').pop()}</td>
-                                            <td style={{ opacity: 0.6 }}>{new Date(log.CreationTime).toLocaleDateString()}</td>
-                                         </tr>
-                                      ))}
-                                   </tbody>
-                                </table>
-                             </div>
-
-                             <h3>⚡ Real-Time Security Pulse</h3>
-
-
-                            <div className="table-container">
-                               <table className="custom-table" style={{ width: '100%' }}>
-                                  <thead>
-                                     <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                        <th>DateTime</th>
-                                        <th>Action</th>
-                                        <th>Resource Path</th>
-                                     </tr>
-                                  </thead>
-                                  <tbody>
-                                     {data.filter(d => d.UserId?.toLowerCase() === selectedUserIntel.toLowerCase()).slice(0, 10).map((log, i) => (
-                                        <tr key={i}>
-                                           <td>{new Date(log.CreationTime).toLocaleString()}</td>
-                                           <td><span style={{ color: 'var(--primary)' }}>{log.Operation}</span></td>
-                                           <td style={{ fontSize: '0.8rem', opacity: 0.8 }}>{log.ObjectId?.split('/').pop()}</td>
-                                        </tr>
-                                     ))}
-                                  </tbody>
-                               </table>
-                            </div>
-                         </div>
                        </div>
                     </div>
                  )}
@@ -982,26 +1024,6 @@ function App() {
                      </h2>
                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                         Aggregated from last 24h M365 Audit Logs
-                     </div>
-                  </div>
-
-                  {/* Summary Metrics Cards for Clarity */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #ef4444' }}>
-                        <div style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>High Risk Profiles</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.filter(s => s.level === 'Critical').length}</div>
-                     </div>
-                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #3b82f6' }}>
-                        <div style={{ color: '#3b82f6', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>Active Monitoring</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.length} Users</div>
-                     </div>
-                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #10b981' }}>
-                        <div style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>Files Shielded</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.reduce((acc, s) => acc + s.fileCount, 0)}</div>
-                     </div>
-                     <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
-                        <div style={{ color: '#f59e0b', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>Security Alerts</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: '800' }}>{riskStats.reduce((acc, s) => acc + s.flags.length, 0)}</div>
                      </div>
                   </div>
 
@@ -1128,7 +1150,15 @@ function App() {
               )}
             </>
           )}
-        </main>
+            {activeTab === 'admin' && adminStatus.isSuperAdmin && (
+              <AdminPortal 
+                authorizedUsers={authorizedUsers} 
+                fetchAuthList={fetchAuthList} 
+                API_BASE={API_BASE} 
+              />
+            )}
+          </main>
+        )}
       </AuthenticatedTemplate>
 
       <UnauthenticatedTemplate>

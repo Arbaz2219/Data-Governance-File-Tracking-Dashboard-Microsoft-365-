@@ -16,6 +16,24 @@ const FETCH_WINDOW_HOURS = 6;
 
 // PATHS FOR LOG STORAGE
 const WEB_LOG_FILE = path.join(__dirname, 'web_activity_logs.json');
+const AUTHORIZED_FILE = path.join(__dirname, 'authorized_users.json');
+
+// Initialize Authorized Users if missing
+function initAuthorizedUsers() {
+    if (!fs.existsSync(AUTHORIZED_FILE)) {
+        const initialAdmins = ['kundan@ldplogistics.com', 'help-desk@ldplogistics.com'];
+        fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(initialAdmins, null, 2));
+        console.log("[ADMIN] Authorized users list initialized.");
+    }
+}
+initAuthorizedUsers();
+
+// SENSITIVE CONTENT KEYWORDS
+const SENSITIVE_KEYWORDS = ['salary', 'invoice', 'password', 'confidential', 'secret', 'contract', 'finance', 'payment', 'tax', 'bonus'];
+function checkSensitivity(path) {
+    if (!path) return false;
+    return SENSITIVE_KEYWORDS.some(kw => path.toLowerCase().includes(kw));
+}
 
 // EMAIL ALERT SYSTEM 
 const ALERT_EMAIL = 'help-desk@ldplogistics.com';
@@ -160,6 +178,9 @@ async function fetchAuditData() {
         
         fetchedEvents.forEach(e => {
             if (!existingEventsMap.has(e.Id)) {
+                // ADD SECURITY INTELLIGENCE
+                e.isSensitive = checkSensitivity(e.ObjectId);
+                
                 existingEventsMap.set(e.Id, e);
                 newEventsAdded++;
                 
@@ -217,6 +238,50 @@ app.use('/api', (req, res, next) => {
     } else {
         console.warn(`Blocked unauthorized access attempt to: ${req.path} from IP: ${req.ip}`);
         res.status(403).json({ error: "Access Denied: Secure Terminal Only" });
+    }
+});
+
+// ADMIN API: User Authorization Management
+app.get('/api/admin/authorized-users', (req, res) => {
+    try {
+        const users = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
+        res.json(users);
+    } catch (e) {
+        res.status(500).json({ error: "Failed to read authorized list" });
+    }
+});
+
+app.post('/api/admin/authorized-users', (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: "Email required" });
+        
+        let users = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
+        if (!users.includes(email.toLowerCase())) {
+            users.push(email.toLowerCase());
+            fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(users, null, 2));
+        }
+        res.json({ success: true, users });
+    } catch (e) {
+        res.status(500).json({ error: "Failed to update authorized list" });
+    }
+});
+
+app.delete('/api/admin/authorized-users', (req, res) => {
+    try {
+        const { email } = req.body;
+        let users = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
+        
+        // Prevent deleting the super admin
+        if (email.toLowerCase() === 'kundan@ldplogistics.com') {
+            return res.status(403).json({ error: "Cannot revoke Super Admin access" });
+        }
+
+        const filtered = users.filter(u => u !== email.toLowerCase());
+        fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(filtered, null, 2));
+        res.json({ success: true, users: filtered });
+    } catch (e) {
+        res.status(500).json({ error: "Failed to update authorized list" });
     }
 });
 
