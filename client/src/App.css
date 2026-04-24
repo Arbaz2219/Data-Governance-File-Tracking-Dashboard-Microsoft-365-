@@ -3,18 +3,23 @@
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--bg-main);
+  background-color: #020617;
+  color: #fff;
+  width: 100%;
 }
 
 /* SIDEBAR */
 .sidebar {
   width: 280px;
-  background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--glass-border);
+  min-width: 280px;
+  background-color: #0B1120;
+  border-right: 1px solid rgba(255,255,255,0.05);
   display: flex;
   flex-direction: column;
   padding: 1.5rem 0;
-  transition: all 0.3s ease;
+  height: 100vh;
+  position: sticky;
+  top: 0;
 }
 
 .logo-section {
@@ -80,8 +85,36 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 2.5rem;
+  background: #020617;
+  width: 100%;
+  min-width: 0; /* Important for flex children to not overflow */
+}
+
+.dashboard-content {
+  padding: 2.5rem;
+  width: 100%;
+  flex: 1;
   overflow-y: auto;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.top-header {
+  height: 70px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(11, 17, 32, 0.8);
+  backdrop-filter: blur(8px);
+  width: 100%;
 }
 
 /* TOPBAR */

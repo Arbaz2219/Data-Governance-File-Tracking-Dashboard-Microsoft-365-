@@ -446,7 +446,7 @@ function App() {
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
 
-  const SUPER_ADMIN = 'kundan@ldplogistics.com';
+  const SUPER_ADMINS = ['kundan@ldplogistics.com', 'arbaz@ldplogistics.com'];
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -459,15 +459,22 @@ function App() {
         headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' }
       });
       const list = await response.json();
-      setAuthorizedUsers(list);
+      const authorizedList = Array.isArray(list) ? list : [];
+      setAuthorizedUsers(authorizedList);
       
       const email = accounts[0]?.username?.toLowerCase();
+      const isSuper = SUPER_ADMINS.includes(email);
       setAdminStatus({
-        isSuperAdmin: email === SUPER_ADMIN,
-        isAuthorized: list.includes(email) || email === SUPER_ADMIN
+        isSuperAdmin: isSuper,
+        isAuthorized: authorizedList.includes(email) || isSuper
       });
     } catch (e) {
-      console.error("Auth sync failed");
+      console.error("Auth sync failed", e);
+      // Fallback for Super Admins even if API is down
+      const email = accounts[0]?.username?.toLowerCase();
+      if (SUPER_ADMINS.includes(email)) {
+        setAdminStatus({ isSuperAdmin: true, isAuthorized: true });
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -745,7 +752,7 @@ function App() {
           </div>
         </aside>
 
-          <main className="dashboard-main">
+          <main className="dashboard-main main-content">
             {/* Header Content */}
             <div className="top-header">
               <div className="system-status">
@@ -769,7 +776,7 @@ function App() {
               {activeTab === 'dashboard' && (
                 <div className="dashboard-content">
                   {/* TOP KPI CARDS */}
-                  <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                  <div className="metrics-grid kpi-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--primary)' }}>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Risk Score</div>
                       <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--primary)' }}>0.0%</div>
@@ -789,7 +796,7 @@ function App() {
                   </div>
 
                   {/* MIDDLE ROW PANELS */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                  <div className="analysis-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div className="glass-panel" style={{ padding: '20px' }}>
                       <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Risk Rating Breakdown</h3>
                       <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(0,245,212,0.05) 0%, transparent 70%)' }}>
