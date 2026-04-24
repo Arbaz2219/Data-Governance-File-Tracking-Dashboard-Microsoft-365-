@@ -808,6 +808,8 @@ function App() {
                         <div style={{ width: '160px', height: '160px', borderRadius: '50%', border: '20px solid rgba(255,255,255,0.05)', borderTopColor: 'var(--primary)', transform: 'rotate(-45deg)' }}></div>
                         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, fontSize: '1.5rem', fontWeight: '800' }}>72%</div>
                       </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>Mitigation Tasks Completed</p>
+                    </div>
                   </div>
 
                   {/* LIVE SECURITY FEED TABLE */}
