@@ -693,7 +693,31 @@ function App() {
   return (
     <div className="app-layout">
       <AuthenticatedTemplate>
-        <aside className="sidebar">
+        {authLoading ? (
+          <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0A0F1E' }}>
+            <div className="loading-spinner"></div>
+            <p style={{ marginLeft: '20px', color: 'var(--primary)', fontWeight: '800' }}>VERIFYING TERMINAL ACCESS...</p>
+          </div>
+        ) : !adminStatus.isAuthorized ? (
+          <div className="access-denied-wrapper" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0A0F1E', color: '#fff', textAlign: 'center' }}>
+            <div className="glass-panel" style={{ padding: '60px', maxWidth: '500px', border: '1px solid #ff4d4f', boxShadow: '0 0 30px rgba(255, 77, 79, 0.2)' }}>
+              <Lock size={64} color="#ff4d4f" style={{ marginBottom: '20px' }} />
+              <h1 style={{ color: '#ff4d4f', marginBottom: '10px' }}>ACCESS RESTRICTED</h1>
+              <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                Your identity **{accounts[0]?.username}** is not authorized to access this terminal. 
+                Contact the system administrator to request access.
+              </p>
+              <button 
+                onClick={() => instance.logoutRedirect()} 
+                style={{ marginTop: '30px', padding: '12px 30px', background: '#ff4d4f', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '800' }}
+              >
+                Logout / Switch Account
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <aside className="sidebar">
           <div className="logo-section">
             <div style={{ padding: '8px', background: 'rgba(20, 184, 166, 0.1)', borderRadius: '10px', display: 'flex' }}>
               <LayoutDashboard size={24} color="var(--primary)" />
@@ -1147,7 +1171,6 @@ function App() {
                 </div>
               )}
             </>
-          )}
             {activeTab === 'admin' && adminStatus.isSuperAdmin && (
               <AdminPortal 
                 authorizedUsers={authorizedUsers} 
@@ -1155,9 +1178,10 @@ function App() {
                 API_BASE={API_BASE} 
               />
             )}
-          </main>
-        )}
-      </AuthenticatedTemplate>
+              </main>
+            </>
+          )}
+        </AuthenticatedTemplate>
 
       <UnauthenticatedTemplate>
         <div className="login-page-wrapper dark-theme-override">
