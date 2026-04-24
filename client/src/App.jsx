@@ -860,7 +860,14 @@ function App() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.slice(-15).reverse().map((log, i) => (
+                                {data.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                            <div style={{ marginBottom: '10px' }}><ShieldCheck size={32} opacity={0.3} /></div>
+                                            No active threats or transactions detected in the current sync window.
+                                        </td>
+                                    </tr>
+                                ) : data.slice(-15).reverse().map((log, i) => (
                                     <tr key={i}>
                                         <td style={{ fontSize: '0.8rem' }}>{formatNJTime(log.CreationTime)}</td>
                                         <td style={{ fontWeight: '700' }}>{log.UserId?.split('@')[0]}</td>
