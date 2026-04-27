@@ -446,7 +446,7 @@ function App() {
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
 
-  const SUPER_ADMINS = ['kundan@ldplogistics.com', 'arbaz@ldplogistics.com'];
+  const SUPER_ADMINS = ['kundan@ldplogistics.com', 'help-desk@ldplogistics.com'];
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -923,7 +923,8 @@ function App() {
                                   <th>Sensitivity</th>
                                   <th>Action Count</th>
                                   <th>Files Accessed</th>
-                                  <th>Action</th>
+                                  <th>Dashboard Access</th>
+                                  <th>Investigate</th>
                                </tr>
                             </thead>
                             <tbody>
@@ -963,6 +964,45 @@ function App() {
                                      </td>
                                      <td><span style={{ fontWeight: '700', color: 'var(--primary)' }}>{u.actions}</span></td>
                                      <td><span style={{ fontWeight: '700' }}>{u.files.size}</span></td>
+                                     <td>
+                                        {adminStatus.isSuperAdmin && (
+                                           authorizedUsers.includes(u.id.toLowerCase()) ? (
+                                              <button
+                                                 style={{ padding: '5px 12px', background: 'rgba(255,77,79,0.12)', color: '#ff4d4f', border: '1px solid rgba(255,77,79,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                 onClick={async () => {
+                                                    if (!window.confirm(`Revoke access for ${u.id}?`)) return;
+                                                    await fetch(`${API_BASE}/api/admin/authorized-users`, {
+                                                       method: 'DELETE',
+                                                       headers: { 'Content-Type': 'application/json', 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' },
+                                                       body: JSON.stringify({ email: u.id.toLowerCase() })
+                                                    });
+                                                    await fetchAuthList();
+                                                 }}
+                                              >
+                                                 <ShieldX size={12} /> Revoke
+                                              </button>
+                                           ) : (
+                                              <button
+                                                 style={{ padding: '5px 12px', background: 'rgba(0,245,212,0.1)', color: 'var(--primary)', border: '1px solid rgba(0,245,212,0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                 onClick={async () => {
+                                                    await fetch(`${API_BASE}/api/admin/authorized-users`, {
+                                                       method: 'POST',
+                                                       headers: { 'Content-Type': 'application/json', 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' },
+                                                       body: JSON.stringify({ email: u.id.toLowerCase() })
+                                                    });
+                                                    await fetchAuthList();
+                                                 }}
+                                              >
+                                                 <ShieldCheck size={12} /> Grant Access
+                                              </button>
+                                           )
+                                        )}
+                                        {!adminStatus.isSuperAdmin && (
+                                           <span style={{ fontSize: '0.7rem', color: authorizedUsers.includes(u.id.toLowerCase()) ? '#52c41a' : 'var(--text-muted)' }}>
+                                              {authorizedUsers.includes(u.id.toLowerCase()) ? 'Authorized' : 'Restricted'}
+                                           </span>
+                                        )}
+                                     </td>
                                      <td>
                                         <button 
                                            className="tab-btn" 
