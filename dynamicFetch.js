@@ -151,13 +151,21 @@ async function fetchAuditData() {
         const endTime = new Date();
         const startTime = new Date(endTime.getTime() - (FETCH_WINDOW_HOURS * 60 * 60 * 1000));
         
-        const feedUrl = `${API_BASE_URL}?contentType=Audit.SharePoint&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}`;
+        const feedUrlSP = `${API_BASE_URL}?contentType=Audit.SharePoint&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}`;
+        const feedUrlAAD = `${API_BASE_URL}?contentType=Audit.AzureActiveDirectory&startTime=${startTime.toISOString()}&endTime=${endTime.toISOString()}`;
 
-        const contentResponse = await axios.get(feedUrl, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
+        let contentUris = [];
+        try {
+            const [spRes, aadRes] = await Promise.all([
+                axios.get(feedUrlSP, { headers: { 'Authorization': `Bearer ${accessToken}` } }),
+                axios.get(feedUrlAAD, { headers: { 'Authorization': `Bearer ${accessToken}` } })
+            ]);
+            if (spRes.data) contentUris = contentUris.concat(spRes.data);
+            if (aadRes.data) contentUris = contentUris.concat(aadRes.data);
+        } catch (err) {
+            console.error("Error fetching blob URIs:", err.message);
+        }
 
-        const contentUris = contentResponse.data;
         if (!contentUris || contentUris.length === 0) {
             console.log("No new blob URIs discovered.");
             return;

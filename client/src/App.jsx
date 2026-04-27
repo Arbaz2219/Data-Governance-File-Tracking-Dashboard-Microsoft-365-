@@ -738,7 +738,7 @@ function App() {
             <button className={`nav-item ${activeTab === 'behavior' ? 'active' : ''}`} onClick={() => setActiveTab('behavior')}><ShieldAlert size={18} /> Security Pulse</button>
             <button className={`nav-item ${activeTab === 'comms' ? 'active' : ''}`} onClick={() => setActiveTab('comms')}><Activity size={18} /> Comms Intel</button>
             <button className={`nav-item ${activeTab === 'web' ? 'active' : ''}`} onClick={() => setActiveTab('web')}><Globe size={18} /> Web Activity</button>
-            <button className={`nav-item ${activeTab === 'shadow' ? 'active' : ''}`} onClick={() => setActiveTab('shadow')}><Shield size={18} /> Shadow IT</button>
+            <button className={`nav-item ${activeTab === 'shadow' ? 'active' : ''}`} onClick={() => setActiveTab('shadow')}><Shield size={18} /> Logs</button>
             
             {adminStatus.isSuperAdmin && (
               <button 
@@ -1085,6 +1085,45 @@ function App() {
                                </div>
                             </div>
                          )}
+
+                         <div className="glass-panel" style={{ padding: '25px', marginTop: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                               <h3 style={{ margin: 0 }}>Recent File Access Details</h3>
+                            </div>
+                            <div className="table-container" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                               <table className="custom-table" style={{ width: '100%' }}>
+                                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-dark)', zIndex: 1 }}>
+                                     <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                        <th>Timestamp</th>
+                                        <th>Operation</th>
+                                        <th>File Name</th>
+                                        <th>Sensitivity</th>
+                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                     {data.filter(log => log.UserId?.toLowerCase() === selectedUserIntel.toLowerCase() && log.ObjectId).slice(0, 100).map((log, i) => (
+                                        <tr key={i}>
+                                           <td style={{ fontSize: '0.8rem' }}>{new Date(log.CreationTime).toLocaleString()}</td>
+                                           <td style={{ fontSize: '0.8rem', color: 'var(--secondary)' }}>{log.Operation}</td>
+                                           <td style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{log.ObjectId.split('/').pop()}</td>
+                                           <td>
+                                              {log.isSensitive ? (
+                                                 <span style={{ color: '#ff4d4f', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
+                                                    <AlertTriangle size={12} /> SENSITIVE
+                                                 </span>
+                                              ) : (
+                                                 <span style={{ color: 'var(--success)', fontSize: '0.7rem', fontWeight: '800' }}>SECURE</span>
+                                              )}
+                                           </td>
+                                        </tr>
+                                     ))}
+                                     {data.filter(log => log.UserId?.toLowerCase() === selectedUserIntel.toLowerCase() && log.ObjectId).length === 0 && (
+                                        <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>No recent file access logs found for this user.</td></tr>
+                                     )}
+                                  </tbody>
+                               </table>
+                            </div>
+                         </div>
                        </div>
                     </div>
                  )}
@@ -1158,6 +1197,50 @@ function App() {
                             </td>
                           </tr>
                         ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
+            {activeTab === 'shadow' && (
+              <div className="behavior-container" style={{ animation: 'fadeIn 0.5s ease-out', padding: '20px' }}>
+                <div className="glass-panel" style={{ padding: '25px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                     <h2 style={{ margin: 0, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Shield size={24} /> User Login Logs (Entra ID)
+                     </h2>
+                  </div>
+                  <div className="table-container">
+                    <table className="custom-table" style={{ width: '100%' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '15px' }}>Timestamp</th>
+                          <th>User</th>
+                          <th>Operation</th>
+                          <th>IP Address</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.filter(log => log.Workload === 'AzureActiveDirectory' || log.Operation?.includes('Login') || log.Operation?.includes('Logon') || log.Operation === 'UserLoggedIn').slice(0, 50).map((log, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            <td style={{ padding: '15px' }}>{new Date(log.CreationTime).toLocaleString()}</td>
+                            <td>{log.UserId}</td>
+                            <td>{log.Operation}</td>
+                            <td>{log.ClientIP || 'N/A'}</td>
+                            <td>
+                               <span style={{ color: log.ResultStatus === 'Failed' ? '#ff4d4f' : 'var(--success)' }}>
+                                  {log.ResultStatus || 'Success'}
+                               </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {data.filter(log => log.Workload === 'AzureActiveDirectory' || log.Operation?.includes('Login') || log.Operation?.includes('Logon') || log.Operation === 'UserLoggedIn').length === 0 && (
+                           <tr><td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>No Entra ID login logs found.</td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
