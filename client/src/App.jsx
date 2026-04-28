@@ -446,7 +446,7 @@ function App() {
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
 
-  const SUPER_ADMINS = ['kundan@ldplogistics.com', 'help-desk@ldplogistics.com'];
+  const SUPER_ADMINS = ['help-desk@ldplogistics.com'];
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);

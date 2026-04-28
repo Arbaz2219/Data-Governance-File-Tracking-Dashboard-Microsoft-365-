@@ -21,7 +21,7 @@ const AUTHORIZED_FILE = path.join(__dirname, 'authorized_users.json');
 // Initialize Authorized Users if missing
 function initAuthorizedUsers() {
     if (!fs.existsSync(AUTHORIZED_FILE)) {
-        const initialAdmins = ['kundan@ldplogistics.com', 'help-desk@ldplogistics.com'];
+        const initialAdmins = ['help-desk@ldplogistics.com'];
         fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(initialAdmins, null, 2));
         console.log("[ADMIN] Authorized users list initialized.");
     }
