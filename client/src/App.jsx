@@ -207,11 +207,11 @@ const DashboardContent = React.memo(({ data, error, handleUserClick, sankeyData,
     let processed = [...data].sort((a,b) => new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime());
     
     if (searchTerm) {
-        const term = searchTerm.toLowerCase();
+        const term = String(searchTerm).toLowerCase();
         processed = processed.filter(d => 
-            d.UserId?.toLowerCase().includes(term) || 
-            d.ObjectId?.toLowerCase().includes(term) || 
-            d.Operation?.toLowerCase().includes(term)
+            String(d.UserId || '').toLowerCase().includes(term) || 
+            String(d.ObjectId || '').toLowerCase().includes(term) || 
+            String(d.Operation || '').toLowerCase().includes(term)
         );
     }
 
@@ -446,7 +446,7 @@ function App() {
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
 
-  const SUPER_ADMINS = ['help-desk@ldplogistics.com'];
+  const SUPER_ADMINS = ['help-desk@ldplogistics.com', 'kundan@ldplogistics.com'];
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -579,11 +579,11 @@ function App() {
   const filteredWebActivity = useMemo(() => {
     if (!webActivity || webActivity.length === 0) return [];
     if (!searchTerm) return webActivity;
-    const term = searchTerm.toLowerCase();
+    const term = String(searchTerm).toLowerCase();
     return webActivity.filter(log => 
-      log.DeviceName?.toLowerCase().includes(term) || 
-      log.RemoteUrl?.toLowerCase().includes(term) || 
-      log.InitiatingProcessAccountName?.toLowerCase().includes(term)
+      String(log.DeviceName || '').toLowerCase().includes(term) || 
+      String(log.RemoteUrl || '').toLowerCase().includes(term) || 
+      String(log.InitiatingProcessAccountName || '').toLowerCase().includes(term)
     );
   }, [webActivity, searchTerm]);
 
@@ -928,7 +928,7 @@ function App() {
                                </tr>
                             </thead>
                             <tbody>
-                               {userIntelligenceSummary.filter(u => u.id.includes(searchTerm.toLowerCase())).map((u, i) => (
+                               {userIntelligenceSummary.filter(u => String(u.id || '').toLowerCase().includes(String(searchTerm || '').toLowerCase())).map((u, i) => (
                                   <tr key={i}>
                                      <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -947,10 +947,10 @@ function App() {
                                             borderRadius: '4px', 
                                             fontSize: '0.7rem', 
                                             fontWeight: '800',
-                                            background: riskStats.find(r => r.user.toLowerCase() === u.id.toLowerCase())?.level === 'Critical' ? 'rgba(245, 34, 45, 0.1)' : 'rgba(0, 245, 212, 0.1)',
-                                            color: riskStats.find(r => r.user.toLowerCase() === u.id.toLowerCase())?.level === 'Critical' ? '#ff4d4f' : 'var(--primary)'
+                                            background: riskStats.find(r => String(r.user || '').toLowerCase() === String(u.id || '').toLowerCase())?.level === 'Critical' ? 'rgba(245, 34, 45, 0.1)' : 'rgba(0, 245, 212, 0.1)',
+                                            color: riskStats.find(r => String(r.user || '').toLowerCase() === String(u.id || '').toLowerCase())?.level === 'Critical' ? '#ff4d4f' : 'var(--primary)'
                                         }}>
-                                            {riskStats.find(r => r.user.toLowerCase() === u.id.toLowerCase())?.level || 'LOW'}
+                                            {riskStats.find(r => String(r.user || '').toLowerCase() === String(u.id || '').toLowerCase())?.level || 'LOW'}
                                         </span>
                                      </td>
                                      <td>

