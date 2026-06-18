@@ -438,7 +438,7 @@ function App() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [fullProfile, setFullProfile] = useState(null);
   const [webActivity, setWebActivity] = useState([]);
-  const [activeTab, setActiveTab] = useState('feed'); 
+  const [activeTab, setActiveTab] = useState('dashboard'); 
   const [searchTerm, setSearchTerm] = useState("");
   const [usersList, setUsersList] = useState([]);
   const [selectedUserIntel, setSelectedUserIntel] = useState(null);
@@ -525,7 +525,12 @@ function App() {
       addLink(user, action);
       addLink(action, location);
     });
-    return { nodes: Array.from(nodesMap.values()), links: Array.from(linksMap.values()) };
+    const nodesList = Array.from(nodesMap.values());
+    const linksList = Array.from(linksMap.values());
+    if (nodesList.length === 0 || linksList.length === 0) {
+        return { nodes: [{id: 'Awaiting'}, {id: 'Activity'}], links: [{source: 'Awaiting', target: 'Activity', value: 1}] };
+    }
+    return { nodes: nodesList, links: linksList };
   }, [data]);
 
   const activityData = useMemo(() => {
@@ -561,7 +566,11 @@ function App() {
             stats[userId].lastSeen = log.CreationTime;
         }
     });
-    return Object.values(stats).sort((a, b) => b.actions - a.actions);
+    const now = new Date();
+    return Object.values(stats).map(u => ({
+        ...u,
+        isLive: (now - new Date(u.lastSeen)) < (15 * 60 * 1000) // Active in last 15 minutes
+    })).sort((a, b) => b.actions - a.actions);
   }, [data]);
 
   const fetchWebActivity = async () => {
@@ -773,127 +782,15 @@ function App() {
 
             {/* TAB RENDERING LOGIC */}
             <>
-              {activeTab === 'dashboard' && (
-                <div className="dashboard-content">
-                  {/* TOP KPI CARDS */}
-                  <div className="metrics-grid kpi-row" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
-                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--primary)' }}>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Risk Score</div>
-                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--primary)' }}>0.0%</div>
-                    </div>
-                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--secondary)' }}>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Active Incidents</div>
-                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--secondary)' }}>0</div>
-                    </div>
-                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--warning)' }}>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Vulnerability Rate</div>
-                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--warning)' }}>1.8%</div>
-                    </div>
-                    <div className="glass-panel" style={{ padding: '25px', textAlign: 'center', borderBottom: '3px solid var(--success)' }}>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '10px' }}>Compliance Score</div>
-                      <div style={{ fontSize: '2.4rem', fontWeight: '800', color: 'var(--success)' }}>52.6%</div>
-                    </div>
-                  </div>
-
-                  {/* MIDDLE ROW PANELS */}
-                  <div className="analysis-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                    <div className="glass-panel" style={{ padding: '20px' }}>
-                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Risk Rating Breakdown</h3>
-                      <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'radial-gradient(circle, rgba(0,245,212,0.05) 0%, transparent 70%)' }}>
-                        <div style={{ width: '120px', height: '120px', borderRadius: '50%', border: '15px solid var(--primary)', borderRightColor: 'var(--secondary)', borderBottomColor: 'var(--warning)', borderLeftColor: 'var(--success)' }}></div>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '15px', fontSize: '0.7rem' }}>
-                        <span style={{ color: 'var(--primary)' }}>● Low</span>
-                        <span style={{ color: 'var(--secondary)' }}>● High</span>
-                        <span style={{ color: 'var(--warning)' }}>● Medium</span>
-                        <span style={{ color: 'var(--success)' }}>● Safe</span>
-                      </div>
-                    </div>
-
-                    <div className="glass-panel" style={{ padding: '20px' }}>
-                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Risk Heat Map</h3>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '5px' }}>
-                        {[...Array(25)].map((_, i) => (
-                          <div key={i} style={{ 
-                            height: '40px', 
-                            background: i === 0 || i === 6 || i === 12 ? 'var(--error)' : i < 10 ? 'var(--warning)' : 'var(--success)',
-                            opacity: 0.6 + (Math.random() * 0.4),
-                            borderRadius: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.7rem',
-                            fontWeight: '800'
-                          }}>{Math.floor(Math.random() * 9)}</div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                        <span>Insignificant</span>
-                        <span>Severe</span>
-                      </div>
-                    </div>
-
-                    <div className="glass-panel" style={{ padding: '20px', textAlign: 'center' }}>
-                      <h3 style={{ margin: '0 0 15px 0', fontSize: '1rem' }}>Action Plan Breakdown</h3>
-                      <div style={{ position: 'relative', width: '160px', height: '80px', margin: '20px auto 0', overflow: 'hidden' }}>
-                        <div style={{ width: '160px', height: '160px', borderRadius: '50%', border: '20px solid rgba(255,255,255,0.05)', borderTopColor: 'var(--primary)', transform: 'rotate(-45deg)' }}></div>
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, fontSize: '1.5rem', fontWeight: '800' }}>72%</div>
-                      </div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>Mitigation Tasks Completed</p>
-                    </div>
-                  </div>
-
-                  {/* LIVE SECURITY FEED TABLE */}
-                  <div className="glass-panel" style={{ marginTop: '2rem', padding: '25px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h3 style={{ margin: 0 }}>🚨 Live Security Feed</h3>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--secondary)' }}>REAL-TIME MONITORING ACTIVE</span>
-                    </div>
-                    <div className="table-container">
-                        <table className="custom-table" style={{ width: '100%' }}>
-                            <thead>
-                                <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                    <th>Timestamp (EST)</th>
-                                    <th>Identity</th>
-                                    <th>Operation</th>
-                                    <th>Resource Path</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                                            <div style={{ marginBottom: '10px' }}><ShieldCheck size={32} opacity={0.3} /></div>
-                                            No active threats or transactions detected in the current sync window.
-                                        </td>
-                                    </tr>
-                                ) : data.slice(-15).reverse().map((log, i) => (
-                                    <tr key={i}>
-                                        <td style={{ fontSize: '0.8rem' }}>{formatNJTime(log.CreationTime)}</td>
-                                        <td style={{ fontWeight: '700' }}>{log.UserId?.split('@')[0]}</td>
-                                        <td>
-                                            <span style={{ 
-                                                padding: '4px 8px', 
-                                                background: log.Operation === 'FileDeleted' ? 'rgba(255, 77, 79, 0.1)' : 'rgba(0, 245, 212, 0.1)', 
-                                                color: log.Operation === 'FileDeleted' ? '#ff4d4f' : 'var(--primary)',
-                                                borderRadius: '4px',
-                                                fontSize: '0.7rem',
-                                                fontWeight: '800'
-                                            }}>
-                                                {log.Operation}
-                                            </span>
-                                        </td>
-                                        <td style={{ fontSize: '0.75rem', opacity: 0.8, maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {log.isSensitive && <AlertTriangle size={14} color="#ff4d4f" title="Sensitive Content" style={{ marginRight: '5px', verticalAlign: 'middle' }} />}
-                                            {log.ObjectId?.split('/').pop()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                  </div>
-                </div>
+                   {activeTab === 'dashboard' && (
+                <DashboardContent 
+                  data={data} 
+                  error={error} 
+                  handleUserClick={handleUserClick} 
+                  sankeyData={sankeyData} 
+                  activityData={activityData} 
+                  searchTerm={searchTerm} 
+                />
               )}
 
             {activeTab === 'users' && (
@@ -919,7 +816,8 @@ function App() {
                             <thead>
                                <tr style={{ textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                                   <th>Employee</th>
-                                  <th>Risk Level</th>
+                                   <th>Status</th>
+                                   <th>Risk Level</th>
                                   <th>Sensitivity</th>
                                   <th>Action Count</th>
                                   <th>Files Accessed</th>
@@ -931,19 +829,28 @@ function App() {
                                {userIntelligenceSummary.filter(u => String(u.id || '').toLowerCase().includes(String(searchTerm || '').toLowerCase())).map((u, i) => (
                                   <tr key={i}>
                                      <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                            <div style={{ width: '36px', height: '36px', background: 'rgba(0, 245, 212, 0.1)', border: '1px solid var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: '800' }}>
                                               {u.id[0].toUpperCase()}
                                            </div>
                                            <div>
                                               <div style={{ fontWeight: '700' }}>{u.id.split('@')[0]}</div>
                                               <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{u.id}</div>
-                                           </div>
-                                        </div>
-                                     </td>
-                                     <td>
-                                        <span style={{ 
-                                            padding: '4px 10px', 
+                                            </div>
+                                         </div>
+                                      </td>
+                                      <td>
+                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span className={`status-pulse ${u.isLive ? 'success' : 'offline'}`} 
+                                                  style={{ background: u.isLive ? 'var(--success)' : 'rgba(255,255,255,0.1)' }}></span>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: '700', color: u.isLive ? 'var(--success)' : 'var(--text-muted)' }}>
+                                               {u.isLive ? 'LIVE NOW' : 'OFFLINE'}
+                                            </span>
+                                         </div>
+                                      </td>
+                                      <td>
+                                         <span style={{
+                                             padding: '4px 10px', 
                                             borderRadius: '4px', 
                                             fontSize: '0.7rem', 
                                             fontWeight: '800',
@@ -1106,7 +1013,7 @@ function App() {
                                            <td style={{ fontSize: '0.8rem' }}>{new Date(log.CreationTime).toLocaleString()}</td>
                                            <td style={{ fontSize: '0.8rem', color: 'var(--secondary)' }}>{log.Operation}</td>
                                            <td style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{log.ObjectId.split('/').pop()}</td>
-                                           <td>
+                                            <td>
                                               {log.isSensitive ? (
                                                  <span style={{ color: '#ff4d4f', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
                                                     <AlertTriangle size={12} /> SENSITIVE
@@ -1189,7 +1096,7 @@ function App() {
                             <td>{profile.activityCount}</td>
                             <td style={{ fontWeight: '700', color: 'var(--primary)' }}>{profile.fileCount}</td>
                             <td>
-                              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                                 {profile.flags.map((flag, j) => (
                                   <span key={j} style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '2px' }}>{flag}</span>
                                 ))}
@@ -1336,18 +1243,18 @@ function App() {
               <div className="login-brand-logo">
                 <img src="/ldp-logo.png" alt="LDP Logistics" style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
               </div>
-              <div className="login-brand-tag" style={{ color: 'var(--secondary)' }}>DP LOGISTICS</div>
+              <div className="login-brand-tag" style={{ color: 'var(--secondary)' }}>LDP LOGISTICS</div>
               <h1 className="login-brand-title">Security Risk<br/>Management Portal</h1>
               <p className="login-brand-sub">Enterprise-grade Microsoft 365 audit intelligence, real-time file tracking, and insider threat detection — all in one terminal.</p>
 
               <div className="login-brand-stats">
                 <div className="login-stat">
-                  <span className="login-stat-val">4,800+</span>
+                  <span className="login-stat-val">800+</span>
                   <span className="login-stat-label">Events Tracked</span>
                 </div>
                 <div className="login-stat-divider"/>
                 <div className="login-stat">
-                  <span className="login-stat-val">42</span>
+                  <span className="login-stat-val">12</span>
                   <span className="login-stat-label">Active Users</span>
                 </div>
                 <div className="login-stat-divider"/>
@@ -1414,3 +1321,8 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
