@@ -356,6 +356,15 @@ function App() {
     return Object.values(stats).map(u => ({ ...u, isLive: (now - new Date(u.lastSeen)) < (15 * 60 * 1000) })).sort((a,b) => b.actions - a.actions);
   }, [data]);
 
+  useEffect(() => { 
+    if (accounts.length > 0) {
+      fetchAuthList(); 
+      // Safety timeout to ensure dashboard is accessible even if API sync is slow
+      const timeout = setTimeout(() => setAuthLoading(false), 8000);
+      return () => clearTimeout(timeout);
+    } 
+  }, [accounts]);
+
   useEffect(() => {
     if (accounts.length > 0 && adminStatus.isAuthorized) {
       fetchData();
