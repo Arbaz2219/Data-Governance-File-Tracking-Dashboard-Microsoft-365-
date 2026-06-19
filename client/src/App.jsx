@@ -359,7 +359,6 @@ function App() {
   useEffect(() => { 
     if (accounts.length > 0) {
       fetchAuthList(); 
-      // Safety timeout to ensure dashboard is accessible even if API sync is slow
       const timeout = setTimeout(() => setAuthLoading(false), 8000);
       return () => clearTimeout(timeout);
     } 
@@ -388,9 +387,18 @@ function App() {
     <div className="app-layout">
       <AuthenticatedTemplate>
         {authLoading ? (
-          <div className="loading-container"><div className="loading-spinner"></div><p>VERIFYING TERMINAL ACCESS...</p></div>
+          <div className="loading-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#080e1f', color: '#00d4ff' }}>
+            <div className="loading-spinner"></div>
+            <p style={{ fontWeight: 800, marginTop: '20px' }}>VERIFYING TERMINAL ACCESS...</p>
+          </div>
         ) : !adminStatus.isAuthorized ? (
-          <div className="access-denied-wrapper fadeIn"><div className="chart-panel"><h1>ACCESS RESTRICTED</h1><button onClick={() => instance.logoutRedirect()} className="btn-primary">Logout</button></div></div>
+          <div className="access-denied-wrapper fadeIn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#080e1f' }}>
+            <div className="chart-panel" style={{ textAlign: 'center' }}>
+              <h1 style={{ color: 'var(--danger-red)' }}>ACCESS RESTRICTED</h1>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Your identity has not been authorized for terminal access.</p>
+              <button onClick={() => instance.logoutRedirect()} className="btn-primary">Logout</button>
+            </div>
+          </div>
         ) : (
           <>
             <aside className="sidebar">
@@ -460,7 +468,6 @@ function App() {
 
                 {activeTab === 'admin' && <AdminPortal authorizedUsers={authorizedUsers} fetchAuthList={fetchAuthList} API_BASE={API_BASE} />}
                 
-                {/* Fallback for other tabs being modernized */}
                 {['behavior', 'comms', 'web', 'shadow'].includes(activeTab) && (
                   <div className="fadeIn" style={{ textAlign: 'center', padding: '100px' }}>
                     <Activity size={48} color="var(--accent-cyan)" />
@@ -474,14 +481,26 @@ function App() {
         )}
       </AuthenticatedTemplate>
       <UnauthenticatedTemplate>
-        <div className="login-screen">
-          <div className="login-container">
-            <div className="chart-panel" style={{ padding: '40px', textAlign: 'center' }}>
-              <ShieldAlert size={48} color="var(--accent-cyan)" style={{ marginBottom: '20px' }} />
-              <h1>SECURITY TERMINAL</h1>
-              <p>LDP LOGISTICS DATA GOVERNANCE</p>
-              <button onClick={handleLogin} className="btn-primary" style={{ width: '100%', marginTop: '20px' }}>Login with Microsoft</button>
-              {authError && <div style={{ color: 'var(--danger-red)', marginTop: '10px' }}>{authError}</div>}
+        <div className="login-screen" style={{ 
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center', 
+          background: 'radial-gradient(circle at center, #0d1629 0%, #080e1f 100%)',
+          zIndex: 9999
+        }}>
+          <div className="login-container" style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
+            <div className="terminal-box fadeIn">
+              <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                <div style={{ display: 'inline-flex', padding: '15px', borderRadius: '12px', background: 'rgba(0,212,255,0.1)', marginBottom: '20px' }}>
+                  <ShieldCheck size={40} color="var(--accent-cyan)" />
+                </div>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', letterSpacing: '1px', marginBottom: '5px' }}>SECURITY TERMINAL</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>LDP LOGISTICS DATA GOVERNANCE</p>
+              </div>
+
+              <button onClick={handleLogin} className="btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '8px', background: 'var(--accent-cyan)', color: '#000', border: 'none', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '0.9rem' }}>
+                <LogIn size={18} />
+                Login with Microsoft
+              </button>
             </div>
           </div>
         </div>
