@@ -106,6 +106,18 @@ body {
   background-color: var(--main-bg);
 }
 
+.login-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: radial-gradient(circle at center, #0d1629 0%, #080e1f 100%);
+  z-index: 9999;
+}
+
 .top-header {
   height: 70px;
   padding: 0 30px;
