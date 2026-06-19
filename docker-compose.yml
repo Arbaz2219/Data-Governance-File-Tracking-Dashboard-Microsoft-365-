@@ -1,9 +1,9 @@
 services:
   backend:
-    build: .
+    image: ${BACKEND_IMAGE}
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.prod
     environment:
       - AUDIT_LOG_PATH=/app/data/m365_audit_logs.json
     volumes:
@@ -28,10 +28,7 @@ services:
       - "traefik.http.services.backend-${PROJECT_NAME}.loadbalancer.server.port=3001"
 
   frontend:
-    build:
-      context: ./client
-      args:
-        - VITE_API_URL=https://apildpm365.ldplogistics.com
+    image: ${FRONTEND_IMAGE}
     restart: unless-stopped
     networks:
       - traefik_public

@@ -481,12 +481,7 @@ function App() {
         )}
       </AuthenticatedTemplate>
       <UnauthenticatedTemplate>
-        <div className="login-screen" style={{ 
-          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', 
-          display: 'flex', alignItems: 'center', justifyContent: 'center', 
-          background: 'radial-gradient(circle at center, #0d1629 0%, #080e1f 100%)',
-          zIndex: 9999
-        }}>
+        <div className="login-screen-fixed">
           <div className="login-container" style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
             <div className="terminal-box fadeIn">
               <div style={{ textAlign: 'center', marginBottom: '30px' }}>
