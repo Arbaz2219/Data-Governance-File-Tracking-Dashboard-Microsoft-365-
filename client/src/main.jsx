@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { MsalProvider } from "@azure/msal-react";
 import { msalInstance } from "./authConfig";
 import './index.css'
+import './dashboard.css'
 import App from './App.jsx'
 
 // Ensure MSAL is initialized and redirects are processed before the app renders

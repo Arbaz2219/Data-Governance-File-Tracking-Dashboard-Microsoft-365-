@@ -1,180 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
-
- :root {
-  /* DP LOGISTICS - Futuristic Security Palette */
-  --bg-main: #0A0F1E;    /* Deep Navy Black */
-  --bg-sidebar: #0D1B2A; /* Dark Midnight Blue */
-  --bg-card: #112240;    /* Dark Steel Blue */
-  --bg-header: #0D1B2A;
-  
-  --primary: #00F5D4;    /* Electric Cyan */
-  --primary-glow: rgba(0, 245, 212, 0.3);
-  
-  --accent: #00F5D4;
-  --secondary: #FF4D6D;  /* Vivid Coral Red */
-  --secondary-glow: rgba(255, 77, 109, 0.3);
-  
-  --text-main: #E0E0E0;  /* Soft White */
-  --text-muted: #8892A4; /* Muted Gray */
-  
-  --glass-border: rgba(0, 245, 212, 0.12);
-  --glass-bg: rgba(17, 34, 64, 0.7);
-  
-  --success: #06D6A0;
-  --warning: #FF9F1C;
-  --error: #FF4D6D;
-  --purple: #7B2FBE;
-  
-  /* Heat Map Colors */
-  --heat-high: #FF4D6D;
-  --heat-medium: #FF9F1C;
-  --heat-low: #06D6A0;
-  
-  --card-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
-  --header-height: 70px;
-}
-
-body.dark-mode {
-  /* Redundant but keeps consistency */
-  --bg-main: #0A0F1E;
-  --bg-sidebar: #0D1B2A;
-  --bg-card: #112240;
-}
+/* 
+ * LDP LOGISTICS SECURITY DASHBOARD - GLOBAL STYLES
+ * Powered by Inter (Google Fonts)
+ */
 
 body {
   margin: 0;
-  padding: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-main);
-  color: var(--text-main);
-  background-image: none;
-  overflow-x: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #080e1f;
+  color: #e2e8f0;
 }
 
-* {
-  box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary-glow) transparent;
-}
-
-h1, h2, h3 {
-  font-family: 'Outfit', sans-serif;
-  letter-spacing: -0.02em;
-}
-
-/* Glass Panels */
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  box-shadow: var(--card-shadow);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  position: relative;
-}
-
-.glass-panel::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
-}
-
-.glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-}
-
-/* Shimmer/Skeleton Animation */
-@keyframes shimmer {
-  0% { background-position: -468px 0; }
-  100% { background-position: 468px 0; }
-}
-
-.skeleton {
-  background: #1f2240;
-  background-image: linear-gradient(to right, #1f2240 0%, #2a2e54 20%, #1f2240 40%, #1f2240 100%);
-  background-repeat: no-repeat;
-  background-size: 800px 104px;
-  display: inline-block;
-  position: relative;
-  animation: shimmer 1.5s infinite linear forwards;
-}
-
-/* Pulse Animation */
-@keyframes pulse-glow {
-  0% { transform: scale(0.95); opacity: 0.5; box-shadow: 0 0 0 0 var(--primary-glow); }
-  70% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 10px rgba(0, 0, 0, 0); }
-  100% { transform: scale(0.95); opacity: 0.5; box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
-}
-
-.status-pulse {
-  width: 8px;
-  height: 8px;
-  background: var(--primary);
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 10px;
-  animation: pulse-glow 2s infinite;
-}
-
-.status-pulse.success { background: var(--success); --primary-glow: rgba(0, 255, 136, 0.4); }
-.status-pulse.error { background: var(--error); --primary-glow: rgba(255, 51, 102, 0.4); }
-
-/* Buttons */
-.cyber-button {
-  background: linear-gradient(90deg, var(--primary), #0077ff);
-  color: #000;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.cyber-button:hover {
-  box-shadow: 0 0 20px var(--primary-glow);
-  transform: scale(1.02);
-}
-
-/* Table Styling */
-.custom-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 8px;
-}
-
-.custom-table tr {
-  transition: all 0.2s ease;
-}
-
-.custom-table tr:hover td {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.custom-table td {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid var(--glass-border);
-  border-bottom: 1px solid var(--glass-border);
-}
-
-.custom-table td:first-child {
-  border-left: 1px solid var(--glass-border);
-  border-radius: 12px 0 0 12px;
-}
-
-.custom-table td:last-child {
-  border-right: 1px solid var(--glass-border);
-  border-radius: 0 12px 12px 0;
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }

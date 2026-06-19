@@ -14,8 +14,10 @@
     "@azure/msal-react": "^5.2.1",
     "@nivo/core": "^0.99.0",
     "@nivo/sankey": "^0.99.0",
+    "chart.js": "^4.5.1",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.4",
     "recharts": "^3.8.1"
   },
