@@ -4,7 +4,7 @@ import {
   Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, 
   User as UserIcon, ShieldAlert, Laptop, Globe, Lock, Shield, Settings, 
   UserPlus, UserMinus, ShieldCheck, ShieldX, Search, Plus, Trash2, 
-  AlertTriangle, Camera, Clock, ShieldHalf, Bell
+  AlertTriangle, Camera, Clock, ShieldHalf, Bell, Fingerprint
 } from 'lucide-react';
 import { 
   Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend as ChartLegend, 
@@ -102,7 +102,7 @@ const HeatMapTable = () => {
         <tbody>
           {rows.map((r) => (
             <tr key={r.label}>
-              <td style={{ fontWeight: '700', color: '#fff' }}>{r.label}</td>
+              <td style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{r.label}</td>
               {cols.map((c) => (
                 <td key={c}>
                   <span className={`pill ${r.type}`}>
@@ -118,7 +118,7 @@ const HeatMapTable = () => {
   );
 };
 
-const DashboardContent = React.memo(({ data, metrics, entitiesData, handleUserClick }) => {
+const DashboardContent = React.memo(({ data, metrics, entitiesData, chartColors, handleUserClick }) => {
   return (
     <div className="fadeIn">
       <div className="grid-metrics">
@@ -130,7 +130,7 @@ const DashboardContent = React.memo(({ data, metrics, entitiesData, handleUserCl
 
       <div className="grid-analysis">
         <div className="chart-panel">
-          <div className="chart-title"><ShieldAlert size={18} color="var(--accent-cyan)" /> Risk Rating Breakdown</div>
+          <div className="chart-title"><ShieldAlert size={18} color="var(--accent-primary)" /> Risk Rating Breakdown</div>
           <div style={{ height: '220px', position: 'relative' }}>
             <Doughnut 
               data={{
@@ -138,25 +138,25 @@ const DashboardContent = React.memo(({ data, metrics, entitiesData, handleUserCl
                 datasets: [{
                   data: [14, 25, 33, 48, 12],
                   backgroundColor: [chartColors.severe, chartColors.major, chartColors.moderate, chartColors.minor, chartColors.insignificance],
-                  borderColor: '#0d1629', borderWidth: 2, cutout: '75%'
+                  borderColor: 'var(--panel-bg)', borderWidth: 2, cutout: '75%'
                 }]
               }}
               options={{ maintainAspectRatio: false, plugins: { legend: { display: false } } }}
             />
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>132</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>132</div>
               <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Risks</div>
             </div>
           </div>
         </div>
 
         <div className="chart-panel">
-          <div className="chart-title"><Activity size={18} color="var(--accent-cyan)" /> Risk Heart Map</div>
+          <div className="chart-title"><Activity size={18} color="var(--accent-primary)" /> Risk Heart Map</div>
           <HeatMapTable />
         </div>
 
         <div className="chart-panel">
-          <div className="chart-title"><ShieldHalf size={18} color="var(--accent-cyan)" /> Action Plan Breakdown</div>
+          <div className="chart-title"><ShieldHalf size={18} color="var(--accent-primary)" /> Action Plan Breakdown</div>
           <div style={{ height: '180px', position: 'relative' }}>
             <Doughnut 
               data={{
@@ -164,13 +164,13 @@ const DashboardContent = React.memo(({ data, metrics, entitiesData, handleUserCl
                 datasets: [{
                   data: [35, 45, 20],
                   backgroundColor: [chartColors.completed, chartColors.inProgress, chartColors.pending],
-                  borderColor: '#0d1629', borderWidth: 2, cutout: '75%'
+                  borderColor: 'var(--panel-bg)', borderWidth: 2, cutout: '75%'
                 }]
               }}
               options={{ maintainAspectRatio: false, plugins: { legend: { display: false } } }}
             />
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>56%</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>56%</div>
             </div>
           </div>
         </div>
@@ -178,8 +178,8 @@ const DashboardContent = React.memo(({ data, metrics, entitiesData, handleUserCl
 
       <div className="grid-bottom">
         <div className="chart-panel">
-          <div className="chart-title"><Users size={18} color="var(--accent-cyan)" /> Top 5 Risk Entities</div>
-          <div style={{ height: '300px' }}>
+          <div className="chart-title"><Users size={18} color="var(--accent-primary)" /> Top 5 Risk Entities</div>
+          <div style={{ height: '320px' }}>
             <BarChartJS 
               data={{
                 labels: entitiesData.map(e => e.name),
@@ -194,7 +194,7 @@ const DashboardContent = React.memo(({ data, metrics, entitiesData, handleUserCl
                 indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } },
                 scales: {
                   x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'var(--text-muted)' } },
-                  y: { grid: { display: false }, ticks: { color: '#fff' } }
+                  y: { grid: { display: false }, ticks: { color: 'var(--text-primary)', font: { size: 10 }, padding: 10 } }
                 }
               }}
             />
@@ -268,10 +268,35 @@ function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [authError, setAuthError] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState("");
-  const API_BASE = import.meta.env.VITE_API_URL || '';
+  const [theme, setTheme] = useState('classic'); // 'classic', 'executive', 'light'
+  
+  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
+
+  // Theme-aware Chart Colors
+  const activeColors = useMemo(() => {
+    if (theme === 'light') return {
+      severe: '#DC3545',
+      major: '#FD7E14',
+      moderate: '#FFC107',
+      minor: '#3B7DDD',
+      insignificance: '#E9ECEF',
+      completed: '#28A745',
+      inProgress: '#FFC107',
+      pending: '#DC3545'
+    };
+    return {
+      severe: theme === 'executive' ? '#EF4444' : '#ff3b3b',
+      major: theme === 'executive' ? '#F59E0B' : '#ff8c00',
+      moderate: theme === 'executive' ? '#F59E0B' : '#ffb800',
+      minor: theme === 'executive' ? '#3B82F6' : '#00d4ff',
+      insignificance: theme === 'executive' ? '#475569' : '#2a3a55',
+      completed: theme === 'executive' ? '#10B981' : '#00e676',
+      inProgress: theme === 'executive' ? '#F59E0B' : '#ffb800',
+      pending: theme === 'executive' ? '#EF4444' : '#ff3b3b'
+    };
+  }, [theme]);
 
   const metrics = useMemo(() => {
     if (!data || data.length === 0) return { total: 0, riskyUsers: 0, riskPercent: 0, progress: 88.8 };
@@ -313,7 +338,6 @@ function App() {
   const [activeCalls, setActiveCalls] = useState([]);
   const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
-  const [profileData, setProfileData] = useState(null);
 
   const fetchWebActivity = async () => {
     try {
@@ -381,20 +405,20 @@ function App() {
     }
   }, [accounts, activeTab, adminStatus.isAuthorized]);
 
-  const handleLogin = () => instance.loginRedirect(loginRequest).catch(e => setAuthError(e.message));
+  const handleLogin = () => instance.loginRedirect(loginRequest);
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${theme === 'executive' ? 'theme-executive' : theme === 'light' ? 'theme-light' : ''}`}>
       <AuthenticatedTemplate>
         {authLoading ? (
-          <div className="loading-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#080e1f', color: '#00d4ff' }}>
+          <div className="loading-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: 'var(--main-bg)', color: 'var(--accent-primary)' }}>
             <div className="loading-spinner"></div>
             <p style={{ fontWeight: 800, marginTop: '20px' }}>VERIFYING TERMINAL ACCESS...</p>
           </div>
         ) : !adminStatus.isAuthorized ? (
-          <div className="access-denied-wrapper fadeIn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#080e1f' }}>
+          <div className="access-denied-wrapper fadeIn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: 'var(--main-bg)' }}>
             <div className="chart-panel" style={{ textAlign: 'center' }}>
-              <h1 style={{ color: 'var(--danger-red)' }}>ACCESS RESTRICTED</h1>
+              <h1 style={{ color: 'var(--critical)' }}>ACCESS RESTRICTED</h1>
               <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Your identity has not been authorized for terminal access.</p>
               <button onClick={() => instance.logoutRedirect()} className="btn-primary">Logout</button>
             </div>
@@ -402,7 +426,7 @@ function App() {
         ) : (
           <>
             <aside className="sidebar">
-              <div className="logo-section"><LayoutDashboard size={24} color="var(--accent-cyan)" /><h2>LDP LOGISTICS</h2></div>
+              <div className="logo-section"><LayoutDashboard size={24} color="var(--accent-primary)" /><h2>LDP LOGISTICS</h2></div>
               <div className="sidebar-nav">
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: '800', padding: '0 16px', marginBottom: '8px', opacity: 0.5 }}>MAIN COMMAND</div>
                 <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={18} /> Overview</button>
@@ -415,7 +439,7 @@ function App() {
                 <button className={`nav-item ${activeTab === 'shadow' ? 'active' : ''}`} onClick={() => setActiveTab('shadow')}><FileText size={18} /> Shadow IT</button>
 
                 {adminStatus.isSuperAdmin && (
-                  <button className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')} style={{ marginTop: 'auto', color: 'var(--warning-yellow)' }}><Settings size={18} /> Admin Terminal</button>
+                  <button className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')} style={{ marginTop: 'auto', color: 'var(--warning)' }}><Settings size={18} /> Admin Terminal</button>
                 )}
               </div>
             </aside>
@@ -424,9 +448,16 @@ function App() {
               <div className="top-header">
                 <div className="system-status">
                   <span className="pulse-dot green"></span>
-                  <span style={{ color: 'var(--success-green)', fontWeight: '800', fontSize: '0.7rem' }}>SECURE CONNECTION ACTIVE</span>
+                  <span style={{ color: 'var(--success)', fontWeight: '800', fontSize: '0.7rem' }}>SECURE CONNECTION ACTIVE</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  {/* Triple Theme Toggle */}
+                  <div style={{ display: 'flex', background: 'var(--main-bg)', borderRadius: '20px', padding: '4px', border: '1px solid var(--border-color)', gap: '4px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' }}>
+                    <button onClick={() => setTheme('classic')} style={{ background: theme === 'classic' ? 'var(--accent-primary)' : 'transparent', color: theme === 'classic' ? '#000' : 'var(--text-muted)', border: 'none', padding: '4px 10px', borderRadius: '16px', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}>CLASSIC</button>
+                    <button onClick={() => setTheme('executive')} style={{ background: theme === 'executive' ? 'var(--accent-primary)' : 'transparent', color: theme === 'executive' ? '#000' : 'var(--text-muted)', border: 'none', padding: '4px 10px', borderRadius: '16px', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}>EXECUTIVE</button>
+                    <button onClick={() => setTheme('light')} style={{ background: theme === 'light' ? 'var(--accent-primary)' : 'transparent', color: theme === 'light' ? '#000' : 'var(--text-muted)', border: 'none', padding: '4px 10px', borderRadius: '16px', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}>LIGHT</button>
+                  </div>
+
                   <div className="user-pill"><UserIcon size={14} /><span>{accounts[0]?.name?.split(' ')[0]}</span></div>
                   <SystemClock />
                   <button onClick={() => instance.logoutRedirect()} className="logout-icon-btn"><LogIn size={20} /></button>
@@ -434,7 +465,7 @@ function App() {
               </div>
 
               <div className="dashboard-content">
-                {activeTab === 'dashboard' && <DashboardContent data={data} metrics={metrics} entitiesData={entitiesData} handleUserClick={(e) => setActiveTab('users')} />}
+                {activeTab === 'dashboard' && <DashboardContent data={data} metrics={metrics} entitiesData={entitiesData} chartColors={activeColors} handleUserClick={(e) => setActiveTab('users')} />}
                 
                 {activeTab === 'users' && (
                   <div className="fadeIn">
@@ -453,11 +484,11 @@ function App() {
                         <tbody>
                           {userIntelligenceSummary.map(u => (
                             <tr key={u.id}>
-                              <td><div style={{ fontWeight: 700 }}>{u.id.split('@')[0]}</div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{u.id}</div></td>
+                              <td><div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{u.id.split('@')[0]}</div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{u.id}</div></td>
                               <td><span className={`pill ${u.isLive ? 'pill-cyan' : 'pill-gray'}`}>{u.isLive ? 'LIVE' : 'IDLE'}</span></td>
                               <td><span className={`pill ${u.actions > 50 ? 'pill-red' : 'pill-cyan'}`}>{u.actions > 50 ? 'CRITICAL' : 'LOW'}</span></td>
                               <td>{u.actions} hits</td>
-                              <td><button className="btn-primary" style={{ padding: '4px 12px', borderRadius: '4px', background: 'rgba(0,212,255,0.1)', color: 'var(--accent-cyan)', border: '1px solid var(--accent-cyan)' }}>Investigate</button></td>
+                              <td><button className="btn-primary" style={{ padding: '4px 12px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)' }}>Investigate</button></td>
                             </tr>
                           ))}
                         </tbody>
@@ -470,7 +501,7 @@ function App() {
                 
                 {['behavior', 'comms', 'web', 'shadow'].includes(activeTab) && (
                   <div className="fadeIn" style={{ textAlign: 'center', padding: '100px' }}>
-                    <Activity size={48} color="var(--accent-cyan)" />
+                    <Activity size={48} color="var(--accent-primary)" />
                     <h2 style={{ marginTop: '20px' }}>{activeTab.toUpperCase()} TERMINAL ACTIVE</h2>
                     <p style={{ color: 'var(--text-muted)' }}>Real-time telemetry and forensic logs are being streamed to this terminal.</p>
                   </div>
@@ -481,22 +512,31 @@ function App() {
         )}
       </AuthenticatedTemplate>
       <UnauthenticatedTemplate>
-        <div className="login-screen-fixed">
-          <div className="login-container" style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
-            <div className="terminal-box fadeIn">
-              <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                <div style={{ display: 'inline-flex', padding: '15px', borderRadius: '12px', background: 'rgba(0,212,255,0.1)', marginBottom: '20px' }}>
-                  <ShieldCheck size={40} color="var(--accent-cyan)" />
-                </div>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', letterSpacing: '1px', marginBottom: '5px' }}>SECURITY TERMINAL</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>LDP LOGISTICS DATA GOVERNANCE</p>
-              </div>
-
-              <button onClick={handleLogin} className="btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '8px', background: 'var(--accent-cyan)', color: '#000', border: 'none', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '0.9rem' }}>
-                <LogIn size={18} />
-                Login with Microsoft
-              </button>
+        <div className="cyber-login-screen">
+          <div className="cyber-grid-overlay"></div>
+          <div className="cyber-scan-ring inner"></div>
+          <div className="cyber-scan-ring outer"></div>
+          
+          <div className="cyber-card fadeIn">
+            <div className="cyber-fingerprint">
+              <Fingerprint size={48} color="#00d4ff" />
             </div>
+
+            <div className="cyber-glitch-container">
+              <h1 className="cyber-title">cyber</h1>
+              <h1 className="cyber-title" style={{ marginTop: '-15px', color: '#00d4ff' }}>security</h1>
+              <p className="cyber-subtitle">SYSTEM AUTHORIZATION REQUIRED</p>
+            </div>
+
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', textAlign: 'center', marginBottom: '30px', lineHeight: 1.6 }}>
+              LDP Logistics Data Governance Portal. <br/>
+              Unauthorized access to this terminal is strictly prohibited.
+            </p>
+
+            <button onClick={handleLogin} className="cyber-btn">
+              <LogIn size={18} style={{ marginRight: '10px', verticalAlign: 'middle' }} />
+              Access Terminal
+            </button>
           </div>
         </div>
       </UnauthenticatedTemplate>
