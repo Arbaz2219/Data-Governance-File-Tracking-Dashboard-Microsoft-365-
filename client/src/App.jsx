@@ -331,22 +331,26 @@ function App() {
 
   const fetchAuthList = async () => {
     const email = accounts[0]?.username?.toLowerCase();
-    const isSuper = SUPER_ADMINS.includes(email);
     try {
       const response = await fetch(`${API_BASE}/api/admin/authorized-users`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
       if (!response.ok) throw new Error(`API responded ${response.status}`);
       const list = await response.json();
       const authorizedList = Array.isArray(list) ? list : [];
       setAuthorizedUsers(authorizedList);
-      setAdminStatus({ isSuperAdmin: isSuper, isAuthorized: authorizedList.includes(email) || isSuper });
+      // Membership of the Admin Portal list is the only thing that grants
+      // access. Super admin decides who may edit that list, not who gets in -
+      // a super admin still has to appear in it, and the API keeps them there.
+      setAdminStatus({
+        isSuperAdmin: SUPER_ADMINS.includes(email),
+        isAuthorized: authorizedList.includes(email),
+      });
       setAuthError(null);
     } catch (e) {
       console.error("Auth sync failed", e);
-      // An unreachable API is not a rejected identity. Keep super admins in so an
-      // outage cannot lock everyone out, and record why for the denial screen -
-      // "you are not authorized" sends people hunting for a permissions problem
-      // that isn't there.
-      setAdminStatus({ isSuperAdmin: isSuper, isAuthorized: isSuper });
+      // An unreachable API is not a rejected identity. Report the outage rather
+      // than claiming the account lacks access, which sends people hunting for
+      // a permissions problem that isn't there.
+      setAdminStatus({ isSuperAdmin: false, isAuthorized: false });
       setAuthError(e.message);
     } finally { setAuthLoading(false); }
   };

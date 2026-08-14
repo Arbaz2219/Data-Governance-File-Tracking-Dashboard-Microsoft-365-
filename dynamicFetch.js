@@ -21,12 +21,30 @@ const FETCH_WINDOW_HOURS = 6;
 const WEB_LOG_FILE = process.env.WEB_LOG_PATH || path.join(__dirname, 'web_activity_logs.json');
 const AUTHORIZED_FILE = process.env.AUTHORIZED_USERS_PATH || path.join(__dirname, 'authorized_users.json');
 
+// The portal list is the only thing that grants dashboard access. These two
+// accounts additionally manage that list, so they are always kept in it and
+// cannot be removed - otherwise the portal could lock everyone out for good.
+const SUPER_ADMINS = ['help-desk@ldplogistics.com', 'kundan@ldplogistics.com'];
+
+// Reads the list, normalises casing, and guarantees the super admins are in it.
+function readAuthorizedUsers() {
+    const stored = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
+    const users = (Array.isArray(stored) ? stored : []).map(u => String(u).toLowerCase());
+
+    const missing = SUPER_ADMINS.filter(admin => !users.includes(admin));
+    if (missing.length) {
+        users.push(...missing);
+        fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(users, null, 2));
+    }
+    return users;
+}
+
 // Initialize Authorized Users if missing, seeding from the copy shipped in the
 // image so the checked-in list is what a fresh volume starts with.
 function initAuthorizedUsers() {
     if (fs.existsSync(AUTHORIZED_FILE)) return;
 
-    let initialAdmins = ['help-desk@ldplogistics.com'];
+    let initialAdmins = [...SUPER_ADMINS];
     const seedFile = path.join(__dirname, 'authorized_users.json');
     if (seedFile !== AUTHORIZED_FILE && fs.existsSync(seedFile)) {
         try {
@@ -272,8 +290,7 @@ app.use('/api', (req, res, next) => {
 // ADMIN API: User Authorization Management
 app.get('/api/admin/authorized-users', (req, res) => {
     try {
-        const users = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
-        res.json(users);
+        res.json(readAuthorizedUsers());
     } catch (e) {
         res.status(500).json({ error: "Failed to read authorized list" });
     }
@@ -284,7 +301,7 @@ app.post('/api/admin/authorized-users', (req, res) => {
         const { email } = req.body;
         if (!email) return res.status(400).json({ error: "Email required" });
         
-        let users = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
+        let users = readAuthorizedUsers();
         if (!users.includes(email.toLowerCase())) {
             users.push(email.toLowerCase());
             fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(users, null, 2));
@@ -298,13 +315,15 @@ app.post('/api/admin/authorized-users', (req, res) => {
 app.delete('/api/admin/authorized-users', (req, res) => {
     try {
         const { email } = req.body;
-        let users = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
-        
-        // Prevent deleting the super admin
-        if (email.toLowerCase() === 'kundan@ldplogistics.com') {
+        if (!email) return res.status(400).json({ error: "Email required" });
+
+        // Prevent deleting a super admin, which would leave nobody able to
+        // administer the list.
+        if (SUPER_ADMINS.includes(email.toLowerCase())) {
             return res.status(403).json({ error: "Cannot revoke Super Admin access" });
         }
 
+        const users = readAuthorizedUsers();
         const filtered = users.filter(u => u !== email.toLowerCase());
         fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(filtered, null, 2));
         res.json({ success: true, users: filtered });
