@@ -260,6 +260,8 @@ const AdminPortal = ({ authorizedUsers, fetchAuthList, API_BASE }) => {
   );
 };
 
+const SUPER_ADMINS = ['help-desk@ldplogistics.com', 'kundan@ldplogistics.com'];
+
 function App() {
   const { instance, accounts } = useMsal();
   const [authorizedUsers, setAuthorizedUsers] = useState([]);
@@ -268,6 +270,7 @@ function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [adminStatus, setAdminStatus] = useState({ isSuperAdmin: false, isAuthorized: false });
+  const [authError, setAuthError] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -327,16 +330,24 @@ function App() {
   }, [data]);
 
   const fetchAuthList = async () => {
+    const email = accounts[0]?.username?.toLowerCase();
+    const isSuper = SUPER_ADMINS.includes(email);
     try {
       const response = await fetch(`${API_BASE}/api/admin/authorized-users`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
+      if (!response.ok) throw new Error(`API responded ${response.status}`);
       const list = await response.json();
       const authorizedList = Array.isArray(list) ? list : [];
       setAuthorizedUsers(authorizedList);
-      const email = accounts[0]?.username?.toLowerCase();
-      const isSuper = ['help-desk@ldplogistics.com', 'kundan@ldplogistics.com'].includes(email);
       setAdminStatus({ isSuperAdmin: isSuper, isAuthorized: authorizedList.includes(email) || isSuper });
+      setAuthError(null);
     } catch (e) {
       console.error("Auth sync failed", e);
+      // An unreachable API is not a rejected identity. Keep super admins in so an
+      // outage cannot lock everyone out, and record why for the denial screen -
+      // "you are not authorized" sends people hunting for a permissions problem
+      // that isn't there.
+      setAdminStatus({ isSuperAdmin: isSuper, isAuthorized: isSuper });
+      setAuthError(e.message);
     } finally { setAuthLoading(false); }
   };
 
@@ -433,8 +444,17 @@ function App() {
         ) : !adminStatus.isAuthorized ? (
           <div className="access-denied-wrapper fadeIn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: 'var(--main-bg)' }}>
             <div className="chart-panel" style={{ textAlign: 'center' }}>
-              <h1 style={{ color: 'var(--critical)' }}>ACCESS RESTRICTED</h1>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Your identity has not been authorized for terminal access.</p>
+              <h1 style={{ color: 'var(--critical)' }}>{authError ? 'SERVICE UNAVAILABLE' : 'ACCESS RESTRICTED'}</h1>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
+                {authError
+                  ? `Could not reach the security API (${authError}). This is a connectivity problem, not a permissions one.`
+                  : 'Your identity has not been authorized for terminal access.'}
+              </p>
+              {accounts[0]?.username && (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '20px' }}>
+                  Signed in as {accounts[0].username}
+                </p>
+              )}
               <button onClick={() => instance.logoutRedirect()} className="btn-primary">Logout</button>
             </div>
           </div>

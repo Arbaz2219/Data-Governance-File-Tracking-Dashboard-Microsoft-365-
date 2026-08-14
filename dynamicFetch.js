@@ -15,16 +15,30 @@ const POLL_INTERVAL_MS = 15 * 1000;
 const FETCH_WINDOW_HOURS = 6; 
 
 // PATHS FOR LOG STORAGE
-const WEB_LOG_FILE = path.join(__dirname, 'web_activity_logs.json');
-const AUTHORIZED_FILE = path.join(__dirname, 'authorized_users.json');
+// These default next to the source, which in the container is outside the
+// mounted volume - so every redeploy silently reset the authorized user list
+// back to the seed admin and threw away collected web activity.
+const WEB_LOG_FILE = process.env.WEB_LOG_PATH || path.join(__dirname, 'web_activity_logs.json');
+const AUTHORIZED_FILE = process.env.AUTHORIZED_USERS_PATH || path.join(__dirname, 'authorized_users.json');
 
-// Initialize Authorized Users if missing
+// Initialize Authorized Users if missing, seeding from the copy shipped in the
+// image so the checked-in list is what a fresh volume starts with.
 function initAuthorizedUsers() {
-    if (!fs.existsSync(AUTHORIZED_FILE)) {
-        const initialAdmins = ['help-desk@ldplogistics.com'];
-        fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(initialAdmins, null, 2));
-        console.log("[ADMIN] Authorized users list initialized.");
+    if (fs.existsSync(AUTHORIZED_FILE)) return;
+
+    let initialAdmins = ['help-desk@ldplogistics.com'];
+    const seedFile = path.join(__dirname, 'authorized_users.json');
+    if (seedFile !== AUTHORIZED_FILE && fs.existsSync(seedFile)) {
+        try {
+            const seeded = JSON.parse(fs.readFileSync(seedFile));
+            if (Array.isArray(seeded) && seeded.length) initialAdmins = seeded;
+        } catch (e) {
+            console.error("[ADMIN] Ignoring unreadable seed list:", e.message);
+        }
     }
+
+    fs.writeFileSync(AUTHORIZED_FILE, JSON.stringify(initialAdmins, null, 2));
+    console.log(`[ADMIN] Authorized users list initialized at ${AUTHORIZED_FILE} with ${initialAdmins.length} user(s).`);
 }
 initAuthorizedUsers();
 

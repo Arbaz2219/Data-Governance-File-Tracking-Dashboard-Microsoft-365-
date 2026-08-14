@@ -81,6 +81,17 @@ jobs:
             fi
             echo "Using compose command: $DC"
 
+            # compose reads the docker-compose.yml sitting on the server, and
+            # nothing here ever refreshed it - so the file in use predates the
+            # repo's and the backend container ended up with a single Traefik
+            # label and no router. Only this one file is synced; .env.prod is
+            # untracked and stays put.
+            echo "Syncing docker-compose.yml from origin/main..."
+            git fetch --quiet origin main
+            git checkout origin/main -- docker-compose.yml
+            echo "Other local divergence in this checkout (informational):"
+            git status --short || true
+
             # Pull through compose so the images that actually get started are the
             # ones refreshed. Pulling hardcoded :latest tags here instead does
             # nothing whenever .env.prod points these vars somewhere else.

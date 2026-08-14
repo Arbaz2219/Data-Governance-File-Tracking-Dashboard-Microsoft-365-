@@ -6,6 +6,8 @@ services:
       - .env.prod
     environment:
       - AUDIT_LOG_PATH=/app/data/m365_audit_logs.json
+      - AUTHORIZED_USERS_PATH=/app/data/authorized_users.json
+      - WEB_LOG_PATH=/app/data/web_activity_logs.json
     volumes:
       - audit_data:/app/data
     networks:
