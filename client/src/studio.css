@@ -589,3 +589,51 @@ palette stays reachable behind .theme-dark for a wall display.
   border-radius: var(--radius-pill);
   font-weight: 700;
 }
+
+/* ── Brand wordmark ─────────────────────────────────────── */
+
+.brand-block { display: flex; flex-direction: column; gap: 4px; }
+
+.brand {
+  display: inline-flex;
+  align-items: baseline;
+  margin: 0;
+  font-size: 2.05rem;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* LDP sits heavier than the rest of the wordmark, as in the printed mark */
+.brand-ldp { font-weight: 900; }
+.brand-name { font-weight: 800; }
+
+.brand-dot {
+  width: 9px;
+  height: 9px;
+  background: #e3242b;
+  margin-left: 5px;
+  align-self: flex-end;
+  margin-bottom: 3px;
+  flex: none;
+}
+
+.brand-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink-faint);
+}
+
+/* Rail carries the initials so the shell still reads as LDP when collapsed */
+.rail-mark {
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 900px) {
+  .brand { font-size: 1.55rem; }
+}

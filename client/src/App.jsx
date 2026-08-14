@@ -825,7 +825,7 @@ function App() {
         ) : (
           <>
             <aside className="icon-rail">
-              <div className="rail-mark"><LayoutDashboard size={22} /></div>
+              <div className="rail-mark">LDP</div>
               {TABS.filter(t => t.key !== 'admin' || adminStatus.isSuperAdmin).map(tab => (
                 <button
                   key={tab.key}
@@ -852,7 +852,16 @@ function App() {
 
             <main className="workspace">
               <div className="workspace-head">
-                <h1 className="page-title">Security <strong>Dashboard</strong></h1>
+                <div className="brand-block">
+                  {/* Wordmark is drawn in type rather than shipped as an image so it
+                      stays crisp at any size and follows the theme's ink colour. */}
+                  <h1 className="brand" aria-label="LDP Logistics">
+                    <span className="brand-ldp">LDP</span>
+                    <span className="brand-name">Logistics</span>
+                    <span className="brand-dot" aria-hidden="true" />
+                  </h1>
+                  <p className="brand-sub">Security Dashboard</p>
+                </div>
                 <div className="head-actions">
                   {/* Reports what the last fetch actually did. The old header claimed
                       SECURE CONNECTION ACTIVE unconditionally, so a dead API and a
