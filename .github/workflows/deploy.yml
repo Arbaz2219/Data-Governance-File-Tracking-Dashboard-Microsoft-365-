@@ -56,18 +56,43 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
+          script_stop: true
           script: |
-            echo "🚀 STAGING: Starting Production Update Flow..."
+            set -e
             cd /root/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
 
-            echo "📥 PULLING: Fetching latest images from Docker Hub..."
-            sudo docker pull arbazm221/ldp_backend:latest
-            sudo docker pull arbazm221/ldp_frontend:latest
+            # Pull through compose so the images that actually get started are the
+            # ones refreshed. Pulling hardcoded :latest tags here instead silently
+            # does nothing whenever .env.prod points BACKEND_IMAGE/FRONTEND_IMAGE
+            # somewhere else, which is how production went stale.
+            echo "Images compose will run:"
+            grep -E '^(BACKEND_IMAGE|FRONTEND_IMAGE)=' .env.prod
 
-            echo "🧹 CLEANING: Removing old containers..."
-            sudo docker-compose --env-file .env.prod down
+            echo "Pulling..."
+            sudo docker-compose --env-file .env.prod pull
 
-            echo "🏗️ RESTARTING: Starting fresh services..."
-            sudo docker-compose --env-file .env.prod up -d
+            echo "Recreating containers..."
+            sudo docker-compose --env-file .env.prod up -d --force-recreate --remove-orphans
 
-            echo "✅ SUCCESS: Production Dashboard Updated!"
+            echo "Now running:"
+            sudo docker-compose --env-file .env.prod ps
+
+      # A green deploy that leaves a months-old container serving traffic is the
+      # exact failure this pipeline had, so assert the live site actually moved.
+      - name: Verify production serves the new build
+        run: |
+          URL=https://ldpm365.ldplogistics.com/
+          for i in $(seq 1 10); do
+            LM=$(curl -sSI --max-time 20 "$URL" | tr -d '\r' | sed -n 's/^[Ll]ast-[Mm]odified: //p')
+            echo "attempt $i: Last-Modified: ${LM:-<none>}"
+            if [ -n "$LM" ]; then
+              AGE=$(( $(date -u +%s) - $(date -u -d "$LM" +%s) ))
+              if [ "$AGE" -lt 3600 ]; then
+                echo "Production is serving a build from ${AGE}s ago."
+                exit 0
+              fi
+            fi
+            sleep 15
+          done
+          echo "::error::Production still serves a stale build. The containers on the server were not replaced - check that BACKEND_IMAGE/FRONTEND_IMAGE in .env.prod match the tags this workflow pushes."
+          exit 1
