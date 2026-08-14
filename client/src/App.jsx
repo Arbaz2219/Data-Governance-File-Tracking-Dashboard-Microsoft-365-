@@ -263,6 +263,9 @@ const AdminPortal = ({ authorizedUsers, fetchAuthList, API_BASE }) => {
 function App() {
   const { instance, accounts } = useMsal();
   const [authorizedUsers, setAuthorizedUsers] = useState([]);
+  const [username, setUsername] = useState('help-desk@ldplogistics.com');
+  const [pwd, setPwd] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [adminStatus, setAdminStatus] = useState({ isSuperAdmin: false, isAuthorized: false });
   const [data, setData] = useState([]);
@@ -272,7 +275,19 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [theme, setTheme] = useState('classic'); // 'classic', 'executive', 'light'
   
-  const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
+  // Dev: Vite proxies /api to localhost:3001. Prod: VITE_API_URL is baked in at
+  // build time; if that build arg is ever missing, fall back to the "api"-prefixed
+  // sibling host (ldpm365.ldplogistics.com -> apildpm365.ldplogistics.com) so the
+  // dashboard never silently fetches HTML from its own origin.
+  const API_BASE = useMemo(() => {
+    if (import.meta.env.DEV) return '';
+    const configured = import.meta.env.VITE_API_URL;
+    if (configured) return configured.replace(/\/+$/, '');
+    const { protocol, host, hostname } = window.location;
+    const servedLocally = hostname === 'localhost' || hostname === '127.0.0.1' ||
+      /^\d+\.\d+\.\d+\.\d+$/.test(hostname);
+    return servedLocally ? '' : `${protocol}//api${host}`;
+  }, []);
 
   // Theme-aware Chart Colors
   const activeColors = useMemo(() => {
@@ -426,7 +441,10 @@ function App() {
         ) : (
           <>
             <aside className="sidebar">
-              <div className="logo-section"><LayoutDashboard size={24} color="var(--accent-primary)" /><h2>LDP LOGISTICS</h2></div>
+              <div className="logo-section">
+                <LayoutDashboard size={24} color="var(--accent-primary)" />
+                <h2>LDP<span className="logo-light">Logistics</span><span className="logo-dot">.</span></h2>
+              </div>
               <div className="sidebar-nav">
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: '800', padding: '0 16px', marginBottom: '8px', opacity: 0.5 }}>MAIN COMMAND</div>
                 <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={18} /> Overview</button>
@@ -478,7 +496,8 @@ function App() {
                             <th>Status</th>
                             <th>Risk Level</th>
                             <th>Activity Count</th>
-                            <th>Actions</th>
+                            <th>Dashboard Access</th>
+                            <th>Investigate</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -488,7 +507,48 @@ function App() {
                               <td><span className={`pill ${u.isLive ? 'pill-cyan' : 'pill-gray'}`}>{u.isLive ? 'LIVE' : 'IDLE'}</span></td>
                               <td><span className={`pill ${u.actions > 50 ? 'pill-red' : 'pill-cyan'}`}>{u.actions > 50 ? 'CRITICAL' : 'LOW'}</span></td>
                               <td>{u.actions} hits</td>
-                              <td><button className="btn-primary" style={{ padding: '4px 12px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)' }}>Investigate</button></td>
+                              <td>
+                                {adminStatus.isSuperAdmin ? (
+                                  authorizedUsers.includes(u.id.toLowerCase()) ? (
+                                    <button
+                                      style={{ padding: '4px 12px', background: 'rgba(255,77,79,0.1)', color: '#ff4d4f', border: '1px solid rgba(255,77,79,0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                      onClick={async () => {
+                                        if (!window.confirm('Revoke access for ' + u.id + '?')) return;
+                                        await fetch(API_BASE + '/api/admin/authorized-users', {
+                                          method: 'DELETE',
+                                          headers: { 'Content-Type': 'application/json', 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' },
+                                          body: JSON.stringify({ email: u.id.toLowerCase() })
+                                        });
+                                        await fetchAuthList();
+                                      }}
+                                    >
+                                      <ShieldX size={12} /> Revoke
+                                    </button>
+                                  ) : (
+                                    <button
+                                      style={{ padding: '4px 12px', background: 'rgba(0,184,148,0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(0,184,148,0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                      onClick={async () => {
+                                        await fetch(API_BASE + '/api/admin/authorized-users', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json', 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' },
+                                          body: JSON.stringify({ email: u.id.toLowerCase() })
+                                        });
+                                        await fetchAuthList();
+                                      }}
+                                    >
+                                      <ShieldCheck size={12} /> Grant Access
+                                    </button>
+                                  )
+                                ) : (
+                                  <span style={{ fontSize: '0.7rem', color: authorizedUsers.includes(u.id.toLowerCase()) ? 'var(--success)' : 'var(--text-muted)' }}>
+                                    {authorizedUsers.includes(u.id.toLowerCase()) ? '✓ Authorized' : '✗ Restricted'}
+                                  </span>
+                                )}
+                              </td>
+                              <td><button className="btn-primary" 
+                                          style={{ padding: '4px 12px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)' }}
+                                          onClick={() => setActiveTab('dashboard')}
+                                  >Investigate</button></td>
                             </tr>
                           ))}
                         </tbody>
@@ -512,31 +572,139 @@ function App() {
         )}
       </AuthenticatedTemplate>
       <UnauthenticatedTemplate>
-        <div className="cyber-login-screen">
-          <div className="cyber-grid-overlay"></div>
-          <div className="cyber-scan-ring inner"></div>
-          <div className="cyber-scan-ring outer"></div>
-          
-          <div className="cyber-card fadeIn">
-            <div className="cyber-fingerprint">
-              <Fingerprint size={48} color="#00d4ff" />
+        <div className="dark-cyber-login-container">
+          <div className="cyber-scanline"></div>
+
+          {/* Logo Brand Overlay */}
+          <div className="cyber-logo-area">
+            <span className="logo-bold">LDP</span>
+            <span className="logo-light">Logistics</span>
+            <span className="logo-dot">.</span>
+          </div>
+
+          {/* Left Panel - Hero Section */}
+          <div className="cyber-hero-panel">
+            <div className="cyber-hero-badge">
+              <div className="cyber-hero-badge-dot"></div>
+              CyberSec Intelligence Platform
             </div>
 
-            <div className="cyber-glitch-container">
-              <h1 className="cyber-title">cyber</h1>
-              <h1 className="cyber-title" style={{ marginTop: '-15px', color: '#00d4ff' }}>security</h1>
-              <p className="cyber-subtitle">SYSTEM AUTHORIZATION REQUIRED</p>
-            </div>
+            <h1 className="cyber-hero-title">
+              Secure Your Digital Environment with Real-Time Cyber Intelligence
+            </h1>
 
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', textAlign: 'center', marginBottom: '30px', lineHeight: 1.6 }}>
-              LDP Logistics Data Governance Portal. <br/>
-              Unauthorized access to this terminal is strictly prohibited.
+            <p className="cyber-hero-desc">
+              Monitor security events, identify vulnerabilities, detect cyber threats, and gain complete visibility into your organization's security posture through one intelligent dashboard.
             </p>
 
-            <button onClick={handleLogin} className="cyber-btn">
-              <LogIn size={18} style={{ marginRight: '10px', verticalAlign: 'middle' }} />
-              Access Terminal
-            </button>
+            <div className="cyber-features-grid">
+              <div className="cyber-feature-item">
+                <div className="cyber-feature-icon-wrapper">
+                  <ShieldAlert size={18} />
+                </div>
+                <div className="cyber-feature-text">Real-Time Threat Monitoring</div>
+              </div>
+
+              <div className="cyber-feature-item">
+                <div className="cyber-feature-icon-wrapper">
+                  <Activity size={18} />
+                </div>
+                <div className="cyber-feature-text">AI-Powered Detection</div>
+              </div>
+
+              <div className="cyber-feature-item">
+                <div className="cyber-feature-icon-wrapper">
+                  <Search size={18} />
+                </div>
+                <div className="cyber-feature-text">Vulnerability Management</div>
+              </div>
+
+              <div className="cyber-feature-item">
+                <div className="cyber-feature-icon-wrapper">
+                  <Laptop size={18} />
+                </div>
+                <div className="cyber-feature-text">Endpoint Protection</div>
+              </div>
+
+              <div className="cyber-feature-item">
+                <div className="cyber-feature-icon-wrapper">
+                  <ShieldCheck size={18} />
+                </div>
+                <div className="cyber-feature-text">Security Analytics</div>
+              </div>
+
+              <div className="cyber-feature-item">
+                <div className="cyber-feature-icon-wrapper">
+                  <FileText size={18} />
+                </div>
+                <div className="cyber-feature-text">Compliance & Risk Reporting</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Glassmorphic Login Form */}
+          <div className="cyber-login-panel">
+            <div className="cyber-login-glass-card">
+              <h2>Welcome Back</h2>
+              <p className="cyber-login-glass-card-tagline">
+                Sign in to access your Cybersecurity Dashboard.
+              </p>
+
+              <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+                <div className="cyber-input-group">
+                  <label htmlFor="username-field">Username</label>
+                  <div className="cyber-input-field-wrapper">
+                    <input
+                      id="username-field"
+                      type="email"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="name@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="cyber-input-group">
+                  <label htmlFor="password-field">Password</label>
+                  <div className="cyber-input-field-wrapper">
+                    <input
+                      id="password-field"
+                      type={showPassword ? "text" : "password"}
+                      value={pwd}
+                      onChange={(e) => setPwd(e.target.value)}
+                      placeholder="Enter password"
+                    />
+                  </div>
+                </div>
+
+                <div className="cyber-show-password-wrapper" onClick={() => setShowPassword(!showPassword)}>
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    readOnly
+                  />
+                  <span>Show password</span>
+                </div>
+
+                <button type="submit" className="cyber-primary-signin-btn">
+                  Sign In
+                </button>
+              </form>
+
+              <div className="cyber-login-divider">
+                <span>Or continue with</span>
+              </div>
+
+              <button className="cyber-sso-login-btn" onClick={handleLogin}>
+                <div className="microsoft-logo">
+                  <div className="microsoft-square red"></div>
+                  <div className="microsoft-square green"></div>
+                  <div className="microsoft-square blue"></div>
+                  <div className="microsoft-square yellow"></div>
+                </div>
+                Microsoft Single Sign-On
+              </button>
+            </div>
           </div>
         </div>
       </UnauthenticatedTemplate>

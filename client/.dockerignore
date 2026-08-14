@@ -1,4 +1,12 @@
 node_modules
 dist
 .env
-.env.local
+.env.*
+*.log
+dev_err.txt
+npm_install_log.txt
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
