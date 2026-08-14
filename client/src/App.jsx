@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Activity, Users, FileText, Share2, LayoutDashboard, Database,
   ShieldAlert, Laptop, Lock, Settings,
-  ShieldCheck, ShieldX, Search, Trash2, AlertTriangle, RefreshCw
+  ShieldCheck, ShieldX, Search, Trash2, AlertTriangle, RefreshCw, Globe
 } from 'lucide-react';
 import {
   Chart as ChartJS, Tooltip as ChartTooltip, Legend as ChartLegend,
@@ -29,6 +29,7 @@ const TABS = [
   { key: 'behavior', label: 'Security Pulse', icon: ShieldAlert },
   { key: 'devices', label: 'Devices', icon: Laptop },
   { key: 'leak', label: 'Data Leak', icon: ShieldX },
+  { key: 'web', label: 'Web Usage', icon: Globe },
   { key: 'admin', label: 'Admin', icon: Settings },
 ];
 
@@ -384,6 +385,97 @@ const DataLeak = ({ report, error, onRefresh, busy }) => {
   );
 };
 
+const WebUsage = ({ report, error, onRefresh, busy }) => {
+  const { available, reason, totals, users, sites } = report;
+  const peak = Math.max(...sites.map(s => s.visits), 1);
+
+  return (
+    <div className="fadeIn">
+      {available && (
+        <div className="tile-row">
+          <Tile icon={Globe} label="Page visits" value={totals.visits.toLocaleString()} note="Reported by the desktop agent" />
+          <Tile tone="sky" icon={Users} label="People" value={totals.users} note="Accounts seen browsing" />
+          <Tile tone="mint" icon={Database} label="Distinct sites" value={totals.sites} note="Unique hostnames" />
+          <Tile tone="blush" icon={ShieldAlert} label="Flagged visits" value={totals.flagged} tag={shareOf(totals.flagged, totals.visits)} note="Outside the allowed categories" used={totals.flagged} total={totals.visits} />
+        </div>
+      )}
+
+      <div className="chart-panel" style={{ marginBottom: 16 }}>
+        <PanelHead icon={Globe} title="Most Visited Sites" onRefresh={onRefresh} busy={busy} />
+        {error ? (
+          <div className="data-empty">{error}</div>
+        ) : !available ? (
+          // Naming the cause matters more than an empty table: browsing data is
+          // absent because nothing is collecting it, not because nobody browses.
+          <div className="data-empty">
+            <strong style={{ display: 'block', marginBottom: 8, color: 'var(--ink)' }}>No browsing data yet</strong>
+            {reason}
+          </div>
+        ) : (
+          <div className="sev-list">
+            {sites.map(site => (
+              <div className="sev-row" key={site.host}>
+                <span className="sev-name" title={site.host}>{site.host}</span>
+                <div className="sev-track">
+                  <div className="sev-fill" style={{ width: `${(site.visits / peak) * 100}%`, background: 'var(--fill-violet)' }} />
+                </div>
+                <span className="sev-count">{site.visits}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {available && (
+        <div className="chart-panel">
+          <div className="chart-title">Per-Person Breakdown</div>
+          <p className="panel-caption">Admin and service accounts are excluded, so this lists staff activity only.</p>
+          <div className="table-scroll">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>Person</th>
+                  <th>Device</th>
+                  <th>Visits</th>
+                  <th>Most visited</th>
+                  <th>Flagged categories</th>
+                  <th>Last seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(person => (
+                  <tr key={person.user}>
+                    <td style={{ fontWeight: 700 }}>{person.user}</td>
+                    <td style={{ color: 'var(--ink-soft)', fontSize: '0.75rem' }}>{person.devices.join(', ') || '—'}</td>
+                    <td className="num">{person.visits}</td>
+                    <td>
+                      {person.topSites.map(s => (
+                        <div key={s.host} style={{ fontSize: '0.75rem' }}>
+                          {s.host} <span style={{ color: 'var(--ink-faint)' }}>({s.visits})</span>
+                        </div>
+                      ))}
+                    </td>
+                    <td>
+                      {person.flaggedCategories.length === 0
+                        ? <span className="pill pill-green">Clean</span>
+                        : person.flaggedCategories.map(c => (
+                            <div key={c.name} style={{ marginBottom: 3 }}>
+                              <span className="pill pill-yellow">{c.name} · {c.visits}</span>
+                            </div>
+                          ))}
+                    </td>
+                    <td style={{ color: 'var(--ink-soft)', fontSize: '0.75rem' }}>{formatWhen(person.lastSeen)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const DeviceFleet = ({ devices, error, onRefresh, busy }) => {
   const [filter, setFilter] = useState('all');
 
@@ -695,6 +787,8 @@ function App() {
   const [devicesError, setDevicesError] = useState(null);
   const [leakReport, setLeakReport] = useState({ summary: { critical: 0, high: 0, medium: 0, sensitiveFiles: 0, eventsScanned: 0 }, incidents: [] });
   const [leakError, setLeakError] = useState(null);
+  const [webReport, setWebReport] = useState({ available: false, reason: null, totals: { visits: 0, users: 0, sites: 0, flagged: 0 }, users: [], sites: [] });
+  const [webError, setWebError] = useState(null);
   const [refreshing, setRefreshing] = useState(null);
 
   // Wraps a fetch so the panel's own button can show it working. Keyed by panel
@@ -718,6 +812,15 @@ function App() {
       setLeakReport(await res.json());
       setLeakError(null);
     } catch (e) { setLeakError(e.message); }
+  };
+
+  const fetchWebUsage = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/security/browsing`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
+      if (!res.ok) throw new Error(`Browsing API responded ${res.status}`);
+      setWebReport(await res.json());
+      setWebError(null);
+    } catch (e) { setWebError(e.message); }
   };
 
   const fetchDevices = async () => {
@@ -780,6 +883,7 @@ function App() {
     const load = () => {
       if (activeTab === 'behavior') fetchRiskStats();
       if (activeTab === 'devices') fetchDevices();
+      if (activeTab === 'web') fetchWebUsage();
     };
     load();
     const interval = setInterval(load, REFRESH_MS * 3);
@@ -995,6 +1099,8 @@ function App() {
                 {activeTab === 'devices' && <DeviceFleet devices={devices} error={devicesError} onRefresh={manualRefresh("devices", fetchDevices)} busy={refreshing === "devices"} />}
 
                 {activeTab === 'leak' && <DataLeak report={leakReport} error={leakError} onRefresh={manualRefresh("leak", fetchDataLeak)} busy={refreshing === "leak"} />}
+
+                {activeTab === 'web' && <WebUsage report={webReport} error={webError} onRefresh={manualRefresh('web', fetchWebUsage)} busy={refreshing === 'web'} />}
               </div>
             </main>
           </>

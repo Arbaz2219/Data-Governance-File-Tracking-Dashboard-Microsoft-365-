@@ -856,6 +856,89 @@ function detectDataLeaks() {
     };
 }
 
+// BROWSING USAGE
+// Aggregated from whatever the desktop agent has reported. Defender's Advanced
+// Hunting API is the other possible source but this tenant's licence blocks it,
+// so the agent is the only feed - and if it has not been deployed this endpoint
+// says so rather than returning an empty list that looks like clean browsing.
+function summariseBrowsing() {
+    const logs = fs.existsSync(WEB_LOG_FILE) ? JSON.parse(fs.readFileSync(WEB_LOG_FILE)) : [];
+
+    const hostOf = (url) => {
+        try { return new URL(url).hostname.replace(/^www\./, ''); }
+        catch { return null; }
+    };
+
+    const perUser = {};
+    const perHost = {};
+    let counted = 0;
+
+    for (const entry of logs) {
+        const user = entry.InitiatingProcessAccountName;
+        if (!user || user === 'Unknown User' || isSystemAccount(user)) continue;
+
+        const host = hostOf(entry.RemoteUrl);
+        if (!host) continue;
+        counted++;
+
+        const profile = (perUser[user] ||= { user, devices: new Set(), visits: 0, hosts: {}, categories: {}, lastSeen: entry.Timestamp });
+        profile.visits++;
+        if (entry.DeviceName) profile.devices.add(entry.DeviceName);
+        profile.hosts[host] = (profile.hosts[host] || 0) + 1;
+        const category = entry.Category || 'Authorized / Standard';
+        profile.categories[category] = (profile.categories[category] || 0) + 1;
+        if (new Date(entry.Timestamp) > new Date(profile.lastSeen)) profile.lastSeen = entry.Timestamp;
+
+        const site = (perHost[host] ||= { host, visits: 0, users: new Set(), category });
+        site.visits++;
+        site.users.add(user);
+    }
+
+    const users = Object.values(perUser).map(p => ({
+        user: p.user,
+        devices: [...p.devices],
+        visits: p.visits,
+        lastSeen: p.lastSeen,
+        // Only the sites worth looking at; the long tail is noise at this level.
+        topSites: Object.entries(p.hosts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([host, visits]) => ({ host, visits })),
+        flaggedCategories: Object.entries(p.categories)
+            .filter(([name]) => name !== 'Authorized / Standard')
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, visits]) => ({ name, visits })),
+    })).sort((a, b) => b.visits - a.visits);
+
+    const sites = Object.values(perHost)
+        .map(s => ({ host: s.host, visits: s.visits, users: s.users.size, category: s.category }))
+        .sort((a, b) => b.visits - a.visits)
+        .slice(0, 20);
+
+    return {
+        available: counted > 0,
+        reason: counted > 0 ? null
+            : 'No browser history has been reported yet. Microsoft Defender Advanced Hunting is blocked by this tenant’s licence, so the Local Desktop Agent (HistoryCollector.ps1) is the only feed - deploy it to the machines you want covered.',
+        totals: {
+            visits: counted,
+            users: users.length,
+            sites: Object.keys(perHost).length,
+            flagged: users.reduce((sum, u) => sum + u.flaggedCategories.reduce((n, c) => n + c.visits, 0), 0),
+        },
+        users,
+        sites,
+    };
+}
+
+app.get('/api/security/browsing', (req, res) => {
+    try {
+        res.json(summariseBrowsing());
+    } catch (e) {
+        console.error('Browsing summary failed:', e.message);
+        res.status(500).json({ error: 'Browsing summary failed' });
+    }
+});
+
 app.get('/api/security/data-leak', (req, res) => {
     try {
         res.json(detectDataLeaks());
