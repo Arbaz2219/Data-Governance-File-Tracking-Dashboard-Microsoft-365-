@@ -1,8 +1,8 @@
 // v1.0.3 - Restored clean structure after sync errors
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database,
-  User as UserIcon, ShieldAlert, Laptop, Lock, Settings,
+  Activity, Users, FileText, Share2, LayoutDashboard, Database,
+  ShieldAlert, Laptop, Lock, Settings,
   ShieldCheck, ShieldX, Search, Trash2, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import {
@@ -12,7 +12,7 @@ import {
 import { Bar as BarChartJS, Line as LineChartJS } from 'react-chartjs-2';
 import { useMsal, AuthenticatedTemplate, UnauthenticatedTemplate } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-import { getLiveTime, generateActivityFeed, SEVERITY_RULES, severityOf } from './dashboard';
+import { generateActivityFeed, SEVERITY_RULES, severityOf } from './dashboard';
 import './App.css';
 
 ChartJS.register(ChartTooltip, ChartLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler);
@@ -21,23 +21,20 @@ ChartJS.register(ChartTooltip, ChartLegend, CategoryScale, LinearScale, BarEleme
 // re-fetches an unchanged payload.
 const REFRESH_MS = 10000;
 
+// One list drives both the icon rail and the pill tabs, so the two can never
+// drift out of sync.
+const TABS = [
+  { key: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+  { key: 'users', label: 'Users', icon: Users },
+  { key: 'behavior', label: 'Security Pulse', icon: ShieldAlert },
+  { key: 'devices', label: 'Devices', icon: Laptop },
+  { key: 'leak', label: 'Data Leak', icon: ShieldX },
+  { key: 'admin', label: 'Admin', icon: Settings },
+];
+
 const formatWhen = (value) => {
   const at = new Date(value);
   return Number.isNaN(at.getTime()) ? '—' : at.toLocaleString();
-};
-
-const SystemClock = () => {
-    const [timeData, setTimeData] = useState(getLiveTime());
-    useEffect(() => {
-        const timer = setInterval(() => setTimeData(getLiveTime()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-    return (
-        <div className="clock-display">
-            <span className="clock-time">{timeData.time}</span>
-            <span className="clock-date">{timeData.date}</span>
-        </div>
-    );
 };
 
 const LiveActivityFeed = ({ data }) => {
@@ -92,17 +89,38 @@ const PanelHead = ({ icon: Icon, title, onRefresh, busy }) => (
   </div>
 );
 
-const KpiCard = ({ label, value, type, icon: Icon, progress, subtext }) => (
-  <div className={`stat-card ${type} fadeIn`}>
-    {Icon && <Icon className="stat-icon" />}
-    <div className="stat-label">{label}</div>
-    <div className="stat-value">{value}</div>
-    {progress !== undefined && (
-      <div className="progress-bar-container">
-        <div className={`progress-bar-fill ${type}`} style={{ width: `${progress}%` }}></div>
-      </div>
-    )}
-    <div className="stat-subtext">{subtext}</div>
+// The tag on a tile states the same proportion its blocks draw, so the meter is
+// never decorative - both come from the two real counts.
+const shareOf = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : null);
+
+// Blocks rather than a smooth bar: at this size a reader can count them, which
+// is the whole point of showing a proportion.
+const Segments = ({ used, total, blocks = 8 }) => {
+  const filled = total > 0 ? Math.min(blocks, Math.round((used / total) * blocks)) : 0;
+  return (
+    <div className="segments" aria-hidden="true">
+      {Array.from({ length: blocks }, (_, i) => (
+        <span key={i} className={`segment ${i < filled ? '' : 'empty'}`} />
+      ))}
+    </div>
+  );
+};
+
+// Pass total to get the segmented meter; leave it out for a bare figure.
+const Tile = ({ icon: Icon, label, tag, value, unit, note, tone = '', used, total }) => (
+  <div className={`tile ${tone} fadeIn`}>
+    <div className="tile-top">
+      <span className="tile-label">
+        <span className="tile-icon">{Icon && <Icon size={15} />}</span>
+        {label}
+      </span>
+      {tag && <span className="tile-tag">{tag}</span>}
+    </div>
+    <div className="tile-figure">
+      {value}{unit !== undefined && <span> / {unit}</span>}
+    </div>
+    {note && <div className="tile-note">{note}</div>}
+    {total !== undefined && <Segments used={used} total={total} />}
   </div>
 );
 
@@ -158,11 +176,11 @@ const DashboardContent = React.memo(({ data, metrics, severityBreakdown, topOper
         <p className="panel-caption" style={{ margin: 0 }}>Most recent {metrics.total.toLocaleString()} audit events. Security Pulse scores the full 24-hour retention window, so its counts are larger.</p>
         <RefreshButton onRefresh={onRefresh} busy={busy} />
       </div>
-      <div className="grid-metrics">
-        <KpiCard label="Events in window" value={metrics.total.toLocaleString()} type="cyan" icon={Database} subtext={`Across ${metrics.users} identities`} />
-        <KpiCard label="Destructive actions" value={metrics.deletions.toLocaleString()} type="red" icon={AlertTriangle} subtext="Deletions and purges" />
-        <KpiCard label="Exposure events" value={metrics.shares.toLocaleString()} type="yellow" icon={Share2} subtext="Sharing and link grants" />
-        <KpiCard label="Failed sign-ins" value={metrics.failedLogins.toLocaleString()} type="green" icon={Lock} subtext="Rejected authentication" />
+      <div className="tile-row">
+        <Tile icon={Database} label="Events" value={metrics.total.toLocaleString()} note={`Across ${metrics.users} identities`} />
+        <Tile tone="blush" icon={AlertTriangle} label="Destructive" value={metrics.deletions.toLocaleString()} tag={shareOf(metrics.deletions, metrics.total)} note="Deletions and purges" used={metrics.deletions} total={metrics.total} />
+        <Tile tone="sky" icon={Share2} label="Exposure" value={metrics.shares.toLocaleString()} tag={shareOf(metrics.shares, metrics.total)} note="Sharing and link grants" used={metrics.shares} total={metrics.total} />
+        <Tile tone="mint" icon={Lock} label="Failed sign-ins" value={metrics.failedLogins.toLocaleString()} tag={shareOf(metrics.failedLogins, metrics.total)} note="Rejected authentication" used={metrics.failedLogins} total={metrics.total} />
       </div>
 
       <div className="grid-analysis">
@@ -222,8 +240,8 @@ const DashboardContent = React.memo(({ data, metrics, severityBreakdown, topOper
                   datasets: [{
                     label: 'Events',
                     data: entitiesData.map(e => e.count),
-                    backgroundColor: chartColors.accent,
-                    borderRadius: 4, barThickness: 20
+                    backgroundColor: chartColors.bar,
+                    borderRadius: 10, barThickness: 22, hoverBackgroundColor: chartColors.accent
                   }]
                 }}
                 options={{
@@ -307,11 +325,11 @@ const DataLeak = ({ report, error, onRefresh, busy }) => {
   const { summary, incidents } = report;
   return (
     <div className="fadeIn">
-      <div className="grid-metrics">
-        <KpiCard label="Critical exposure" value={summary.critical} type="red" icon={AlertTriangle} subtext="Reachable outside the tenant" />
-        <KpiCard label="High risk" value={summary.high} type="yellow" icon={ShieldAlert} subtext="Sensitive files and bulk pulls" />
-        <KpiCard label="Company-wide links" value={summary.medium} type="cyan" icon={Share2} subtext="Access widened internally" />
-        <KpiCard label="Sensitive files seen" value={summary.sensitiveFiles} type="green" icon={FileText} subtext="Matched by filename" />
+      <div className="tile-row">
+        <Tile tone="blush" icon={AlertTriangle} label="Critical" value={summary.critical} note="Reachable outside the tenant" />
+        <Tile icon={ShieldAlert} label="High risk" value={summary.high} note="Sensitive files and bulk pulls" />
+        <Tile tone="sky" icon={Share2} label="Company-wide" value={summary.medium} note="Access widened internally" />
+        <Tile tone="mint" icon={FileText} label="Sensitive files" value={summary.sensitiveFiles} note="Matched by filename" />
       </div>
 
       <div className="chart-panel">
@@ -399,11 +417,11 @@ const DeviceFleet = ({ devices, error, onRefresh, busy }) => {
   return (
     <div className="fadeIn">
       {devices.length > 0 && (
-        <div className="grid-metrics">
-          <KpiCard label="Managed devices" value={devices.length} type="cyan" icon={Laptop} subtext="Enrolled in Intune" />
-          <KpiCard label="Not compliant" value={nonCompliant} type="red" icon={AlertTriangle} subtext="Failing policy right now" />
-          <KpiCard label="Unknown / grace" value={otherState} type="yellow" icon={ShieldAlert} subtext="Not yet reporting a verdict" />
-          <KpiCard label="Compliant" value={compliant} type="green" icon={ShieldCheck} subtext="Meeting policy" />
+        <div className="tile-row">
+          <Tile icon={Laptop} label="Managed" value={devices.length} note="Enrolled in Intune" />
+          <Tile tone="blush" icon={AlertTriangle} label="Not compliant" value={nonCompliant} tag={shareOf(nonCompliant, devices.length)} note="Failing policy right now" used={nonCompliant} total={devices.length} />
+          <Tile tone="sky" icon={ShieldAlert} label="Unknown" value={otherState} tag={shareOf(otherState, devices.length)} note="No verdict yet" used={otherState} total={devices.length} />
+          <Tile tone="mint" icon={ShieldCheck} label="Compliant" value={compliant} tag={shareOf(compliant, devices.length)} note="Meeting policy" used={compliant} total={devices.length} />
         </div>
       )}
 
@@ -539,7 +557,7 @@ function App() {
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [theme, setTheme] = useState('classic'); // 'classic', 'executive', 'light'
+  const [theme, setTheme] = useState('studio'); // 'studio' (light) or 'dark'
   
   // Dev: Vite proxies /api to localhost:3001. Prod: VITE_API_URL is baked in at
   // build time; if that build arg is ever missing, fall back to the "api"-prefixed
@@ -558,11 +576,18 @@ function App() {
   // Theme-aware Chart Colors
   // Chart libraries paint onto a canvas and cannot resolve CSS custom properties,
   // so the marks need literal values even though the surrounding chrome is themed.
-  const activeColors = useMemo(() => ({
-    accent: theme === 'light' ? '#2a78d6' : theme === 'executive' ? '#4a95e8' : '#3987e5',
-    accentFill: theme === 'light' ? 'rgba(42, 120, 214, 0.12)' : 'rgba(57, 135, 229, 0.16)',
-    grid: theme === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.06)',
-    text: theme === 'light' ? '#52617a' : '#8b98a8',
+  const activeColors = useMemo(() => (theme === 'dark' ? {
+    accent: '#a5a6f6',
+    accentFill: 'rgba(165, 166, 246, 0.18)',
+    bar: '#7f80e0',
+    grid: 'rgba(255, 255, 255, 0.07)',
+    text: '#8a8b92',
+  } : {
+    accent: '#8b8cf0',
+    accentFill: 'rgba(165, 166, 246, 0.22)',
+    bar: '#c3d4e2',
+    grid: '#f0f0f2',
+    text: '#8a8b92',
   }), [theme]);
 
   const metrics = useMemo(() => {
@@ -773,7 +798,7 @@ function App() {
   const handleLogin = () => instance.loginRedirect(loginRequest);
 
   return (
-    <div className={`app-layout ${theme === 'executive' ? 'theme-executive' : theme === 'light' ? 'theme-light' : ''}`}>
+    <div className={`studio ${theme === 'dark' ? 'studio-dark' : ''}`}>
       <AuthenticatedTemplate>
         {authLoading ? (
           <div className="loading-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: 'var(--main-bg)', color: 'var(--accent-primary)' }}>
@@ -799,58 +824,72 @@ function App() {
           </div>
         ) : (
           <>
-            <aside className="sidebar">
-              <div className="logo-section">
-                <LayoutDashboard size={24} color="var(--accent-primary)" />
-                <h2>LDP<span className="logo-light">Logistics</span><span className="logo-dot">.</span></h2>
-              </div>
-              <div className="sidebar-nav">
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: '800', padding: '0 16px', marginBottom: '8px', opacity: 0.5 }}>MAIN COMMAND</div>
-                <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={18} /> Overview</button>
-                <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}><Users size={18} /> User Intel</button>
-                <button className={`nav-item ${activeTab === 'behavior' ? 'active' : ''}`} onClick={() => setActiveTab('behavior')}><ShieldAlert size={18} /> Security Pulse</button>
-                <button className={`nav-item ${activeTab === 'devices' ? 'active' : ''}`} onClick={() => setActiveTab('devices')}><Laptop size={18} /> Devices</button>
-                <button className={`nav-item ${activeTab === 'leak' ? 'active' : ''}`} onClick={() => setActiveTab('leak')}>
-                  <ShieldX size={18} /> Data Leak
-                  {leakReport.summary.critical > 0 && (
-                    <span className="nav-badge nav-badge-alert">{leakReport.summary.critical}</span>
+            <aside className="icon-rail">
+              <div className="rail-mark"><LayoutDashboard size={22} /></div>
+              {TABS.filter(t => t.key !== 'admin' || adminStatus.isSuperAdmin).map(tab => (
+                <button
+                  key={tab.key}
+                  className={`rail-btn ${activeTab === tab.key ? 'active' : ''}`}
+                  onClick={() => setActiveTab(tab.key)}
+                  title={tab.label}
+                  aria-label={tab.label}
+                >
+                  <tab.icon size={19} />
+                  {tab.key === 'leak' && leakReport.summary.critical > 0 && (
+                    <span className="rail-dot">{leakReport.summary.critical}</span>
                   )}
                 </button>
-
-                {adminStatus.isSuperAdmin && (
-                  <button className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')} style={{ marginTop: 'auto', color: 'var(--warning)' }}><Settings size={18} /> Admin Terminal</button>
-                )}
-              </div>
+              ))}
+              <div className="rail-spacer" />
+              <button
+                className="rail-avatar"
+                onClick={() => instance.logoutRedirect()}
+                title={`${accounts[0]?.username || ''} — sign out`}
+              >
+                {(accounts[0]?.name || 'U').slice(0, 1).toUpperCase()}
+              </button>
             </aside>
 
-            <main className="main-content">
-              <div className="top-header">
-                {/* Reports what the last fetch actually did. The old header claimed
-                    SECURE CONNECTION ACTIVE unconditionally, so a dead API and a
-                    healthy one looked identical. */}
-                <div className={`sync-status ${syncState}`}>
-                  <span className={`pulse-dot ${syncState === 'ok' ? 'green' : syncState === 'stale' ? 'yellow' : 'red'}`}></span>
-                  {syncState === 'down'
-                    ? `SYNC FAILED — ${error}`
-                    : syncAge === null
-                      ? 'CONNECTING…'
-                      : `LIVE — SYNCED ${syncAge}s AGO`}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                  {/* Triple Theme Toggle */}
-                  <div style={{ display: 'flex', background: 'var(--main-bg)', borderRadius: '20px', padding: '4px', border: '1px solid var(--border-color)', gap: '4px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <button onClick={() => setTheme('classic')} style={{ background: theme === 'classic' ? 'var(--accent-primary)' : 'transparent', color: theme === 'classic' ? '#000' : 'var(--text-muted)', border: 'none', padding: '4px 10px', borderRadius: '16px', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}>CLASSIC</button>
-                    <button onClick={() => setTheme('executive')} style={{ background: theme === 'executive' ? 'var(--accent-primary)' : 'transparent', color: theme === 'executive' ? '#000' : 'var(--text-muted)', border: 'none', padding: '4px 10px', borderRadius: '16px', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}>EXECUTIVE</button>
-                    <button onClick={() => setTheme('light')} style={{ background: theme === 'light' ? 'var(--accent-primary)' : 'transparent', color: theme === 'light' ? '#000' : 'var(--text-muted)', border: 'none', padding: '4px 10px', borderRadius: '16px', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}>LIGHT</button>
-                  </div>
-
-                  <div className="user-pill"><UserIcon size={14} /><span>{accounts[0]?.name?.split(' ')[0]}</span></div>
-                  <SystemClock />
-                  <button onClick={() => instance.logoutRedirect()} className="logout-icon-btn"><LogIn size={20} /></button>
+            <main className="workspace">
+              <div className="workspace-head">
+                <h1 className="page-title">Security <strong>Dashboard</strong></h1>
+                <div className="head-actions">
+                  {/* Reports what the last fetch actually did. The old header claimed
+                      SECURE CONNECTION ACTIVE unconditionally, so a dead API and a
+                      healthy one looked identical. */}
+                  <span className={`sync-chip ${syncState}`}>
+                    <span className="dot" />
+                    {syncState === 'down'
+                      ? `Sync failed — ${error}`
+                      : syncAge === null
+                        ? 'Connecting…'
+                        : `Live · synced ${syncAge}s ago`}
+                  </span>
+                  <button className="ghost-btn" onClick={() => setTheme(theme === 'studio' ? 'dark' : 'studio')}>
+                    <Settings size={15} /> {theme === 'studio' ? 'Dark' : 'Light'}
+                  </button>
+                  <button className="dark-btn" onClick={() => setActiveTab('leak')}>
+                    <ShieldX size={15} /> Review exposure
+                  </button>
                 </div>
               </div>
 
-              <div className="dashboard-content">
+              <nav className="pill-tabs">
+                {TABS.filter(t => t.key !== 'admin' || adminStatus.isSuperAdmin).map(tab => (
+                  <button
+                    key={tab.key}
+                    className={`pill-tab ${activeTab === tab.key ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab.key)}
+                  >
+                    {tab.label}
+                    {tab.key === 'leak' && leakReport.summary.critical > 0 && (
+                      <span className="tab-count">{leakReport.summary.critical}</span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="workspace-body">
                 {activeTab === 'dashboard' && (
                   <DashboardContent
                     data={data}
