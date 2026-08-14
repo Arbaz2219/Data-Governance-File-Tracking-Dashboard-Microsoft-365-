@@ -59,23 +59,45 @@ jobs:
           script_stop: true
           script: |
             set -e
-            cd /root/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
+            APP_DIR=/root/Data-Governance-File-Tracking-Dashboard-Microsoft-365-
+            cd "$APP_DIR" || { echo "FATAL: $APP_DIR does not exist on this server."; exit 1; }
+
+            # Preflight, so a broken deploy names its cause instead of dying on a
+            # cryptic compose error the way this one silently did for months.
+            if [ ! -f .env.prod ]; then
+              echo "FATAL: .env.prod is missing in $APP_DIR."
+              echo "compose needs it for both env_file and --env-file. Directory contains:"
+              ls -la
+              exit 1
+            fi
+
+            if command -v docker-compose >/dev/null 2>&1; then
+              DC="sudo docker-compose"
+            elif sudo docker compose version >/dev/null 2>&1; then
+              DC="sudo docker compose"
+            else
+              echo "FATAL: neither 'docker-compose' nor 'docker compose' is installed."
+              exit 1
+            fi
+            echo "Using compose command: $DC"
 
             # Pull through compose so the images that actually get started are the
-            # ones refreshed. Pulling hardcoded :latest tags here instead silently
-            # does nothing whenever .env.prod points BACKEND_IMAGE/FRONTEND_IMAGE
-            # somewhere else, which is how production went stale.
+            # ones refreshed. Pulling hardcoded :latest tags here instead does
+            # nothing whenever .env.prod points these vars somewhere else.
             echo "Images compose will run:"
-            grep -E '^(BACKEND_IMAGE|FRONTEND_IMAGE)=' .env.prod
+            grep -E '^(BACKEND_IMAGE|FRONTEND_IMAGE)=' .env.prod || {
+              echo "FATAL: BACKEND_IMAGE / FRONTEND_IMAGE are not set in .env.prod."
+              exit 1
+            }
 
-            echo "Pulling..."
-            sudo docker-compose --env-file .env.prod pull
+            $DC --env-file .env.prod pull
+            $DC --env-file .env.prod up -d --force-recreate --remove-orphans
+            $DC --env-file .env.prod ps
 
-            echo "Recreating containers..."
-            sudo docker-compose --env-file .env.prod up -d --force-recreate --remove-orphans
-
-            echo "Now running:"
-            sudo docker-compose --env-file .env.prod ps
+            # Any container here that compose did not just create is a stray from an
+            # older deploy, and Traefik may still be routing traffic to it.
+            echo "All running containers:"
+            sudo docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.RunningFor}}'
 
       # A green deploy that leaves a months-old container serving traffic is the
       # exact failure this pipeline had, so assert the live site actually moved.
