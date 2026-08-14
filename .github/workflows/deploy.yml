@@ -134,15 +134,20 @@ jobs:
       # noticed, because a dashboard with no data looks the same as a slow one.
       - name: Verify the API is routed
         run: |
-          CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
-            https://apildpm365.ldplogistics.com/api/audit-logs || true)
-          echo "GET /api/audit-logs without a key -> $CODE"
-          # 403 is the healthy answer: the request reached Express and its
-          # dashboard-key middleware rejected it. 404 means Traefik has no
-          # route to the backend container at all.
-          if [ "$CODE" = "403" ]; then
-            echo "API is reachable."
-          else
-            echo "::error::Expected 403 from the API, got $CODE. Traefik is not routing to the backend container."
-            exit 1
-          fi
+          # Traefik needs a few seconds to register a freshly recreated
+          # container, so poll rather than judging on the first response.
+          for i in $(seq 1 10); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+              https://apildpm365.ldplogistics.com/api/audit-logs || true)
+            echo "attempt $i: GET /api/audit-logs without a key -> $CODE"
+            # 403 is the healthy answer: the request reached Express and its
+            # dashboard-key middleware rejected it. 404 means Traefik has no
+            # route to the backend container at all.
+            if [ "$CODE" = "403" ]; then
+              echo "API is reachable."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::Expected 403 from the API, got $CODE. Traefik is not routing to the backend container."
+          exit 1
