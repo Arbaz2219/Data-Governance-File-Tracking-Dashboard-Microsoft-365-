@@ -26,6 +26,19 @@ const AUTHORIZED_FILE = process.env.AUTHORIZED_USERS_PATH || path.join(__dirname
 // cannot be removed - otherwise the portal could lock everyone out for good.
 const SUPER_ADMINS = ['help-desk@ldplogistics.com', 'kundan@ldplogistics.com'];
 
+// Service principals and the monitoring accounts are not people; listing them
+// beside real staff in per-user views is pure noise. Every per-user endpoint
+// filters through here so they cannot disagree about who counts as a user.
+function isSystemAccount(user) {
+    const id = String(user || '').toLowerCase();
+    return !id
+        || id.includes('app@sharepoint')
+        || id.includes('urn:spo')
+        || id.startsWith('sharepoint\\')
+        || id === 'system'
+        || SUPER_ADMINS.includes(id);
+}
+
 // Reads the list, normalises casing, and guarantees the super admins are in it.
 function readAuthorizedUsers() {
     const stored = JSON.parse(fs.readFileSync(AUTHORIZED_FILE));
@@ -269,7 +282,35 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
+
+// This API answered Access-Control-Allow-Origin: * while also allowing the
+// x-dashboard-key header, and that key ships inside the public JS bundle. Any
+// website a signed-in employee visited could therefore read the entire audit
+// log out of their browser. Restrict the browser-facing origins to the ones we
+// actually serve.
+//
+// This closes the cross-site path only. It is NOT authentication: anyone who
+// reads the key out of the bundle can still call the API directly with curl,
+// where CORS does not apply. The real fix is verifying the caller's Microsoft
+// token server-side instead of trusting a shared static key.
+const ALLOWED_ORIGINS = [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_DOMAIN ? `https://${process.env.FRONTEND_DOMAIN}` : null,
+    'http://localhost:5173',
+    'http://localhost:3001',
+].filter(Boolean);
+
+app.use(cors({
+    origin(origin, callback) {
+        // No Origin header means it is not a browser cross-site request - the
+        // desktop agent and server-to-server callers land here.
+        if (!origin) return callback(null, true);
+        if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        console.warn(`[CORS] Refused browser origin: ${origin}`);
+        return callback(null, false);
+    },
+}));
+
 app.use(express.json()); // Enable JSON parsing for incoming desktop agent logs
 
 // SECURITY MIDDLEWARE: Block direct endpoint access
@@ -362,22 +403,46 @@ function calculateUserRisk() {
         
         const riskProfiles = {};
 
-        // 1. Audit Log Risks (Deletions are high risk)
+        // 1. Audit Log Risks.
+        // These used to be exact matches on 'FileDeleted' and 'FileShared'. This
+        // tenant emits neither - it reports FileRecycled and SharingLinkCreated -
+        // so every user scored 0 and the whole tab read as "nobody is risky".
+        // Match on the operation family instead.
+        // Each signal is capped so one noisy category cannot saturate the score.
+        // Without the caps a user with a stuck password reached 100 on failed
+        // sign-ins alone and outranked someone actively deleting files, which
+        // makes the ranking useless exactly when it matters.
+        const RISK_SIGNALS = [
+            { key: 'deletion', test: /delete|recycl|purge/i, weight: 15, cap: 45, label: 'File deletion' },
+            { key: 'sharing', test: /sharing|anonymouslink|companylink/i, weight: 10, cap: 30, label: 'External sharing' },
+            { key: 'privilege', test: /permission|addedtogroup|siteadmin|roleassign/i, weight: 8, cap: 24, label: 'Privilege change' },
+            { key: 'failed', test: /failed/i, weight: 1, cap: 35, label: 'Failed sign-ins' },
+        ];
+
         auditLogs.forEach(entry => {
             const user = entry.UserId;
-            if (!riskProfiles[user]) riskProfiles[user] = { score: 0, flags: [], events: 0, files: new Set() };
-            
+            if (isSystemAccount(user)) return;
+            if (!riskProfiles[user]) riskProfiles[user] = { signals: {}, events: 0, files: new Set() };
+
             riskProfiles[user].events++;
             if (entry.ObjectId) riskProfiles[user].files.add(entry.ObjectId);
-            if (entry.Operation === 'FileDeleted') {
-                riskProfiles[user].score += 15;
-                riskProfiles[user].flags.push('File Deletion Detected');
-            }
-            if (entry.Operation === 'FileShared') {
-                riskProfiles[user].score += 10;
-                riskProfiles[user].flags.push('External Sharing Activity');
+
+            const signal = RISK_SIGNALS.find(s => s.test.test(entry.Operation || ''));
+            if (signal) {
+                riskProfiles[user].signals[signal.key] = (riskProfiles[user].signals[signal.key] || 0) + 1;
             }
         });
+
+        for (const profile of Object.values(riskProfiles)) {
+            profile.score = 0;
+            profile.flags = [];
+            for (const signal of RISK_SIGNALS) {
+                const hits = profile.signals[signal.key] || 0;
+                if (!hits) continue;
+                profile.score += Math.min(hits * signal.weight, signal.cap);
+                profile.flags.push(`${signal.label} (${hits})`);
+            }
+        }
 
         // 2. Web History Risks (Shadow IT usage)
         webLogs.forEach(entry => {
@@ -467,8 +532,7 @@ app.get('/api/users/list', (req, res) => {
             const allLogs = JSON.parse(rawData);
             // Get unique user IDs, filter out system accounts and help-desk/kundan
             const users = [...new Set(allLogs.map(log => log.UserId))]
-                .filter(Boolean)
-                .filter(email => !email.includes('app@sharepoint') && !email.includes('urn:spo') && email.toLowerCase() !== 'help-desk@ldplogistics.com' && email.toLowerCase() !== 'kundan@ldplogistics.com');
+                .filter(user => !isSystemAccount(user));
             res.json(users);
         } else {
             res.json([]);
@@ -692,6 +756,112 @@ app.get('/api/security/risk-stats', (req, res) => {
         res.json(riskProfiles);
     } catch (e) {
         res.status(500).json({ error: "Risk Calc Error" });
+    }
+});
+
+// DATA LEAK DETECTION
+// Every rule below fires on a field Microsoft 365 actually populates in this
+// tenant's feed - checked against the stored log rather than assumed. Rules that
+// depend on fields M365 never sends would look like "no leaks" forever, which is
+// the most dangerous possible output for this panel.
+const DOWNLOAD_BURST_COUNT = 10;      // files...
+const DOWNLOAD_BURST_WINDOW_MS = 10 * 60 * 1000;  // ...within this window
+
+function detectDataLeaks() {
+    const auditLogs = fs.existsSync(OUTPUT_FILE) ? JSON.parse(fs.readFileSync(OUTPUT_FILE)) : [];
+    const incidents = [];
+
+    const fileOf = (e) => e.SourceFileName || (e.ObjectId ? decodeURIComponent(String(e.ObjectId).split('/').pop()) : 'Unknown file');
+    const add = (e, severity, type, detail) => incidents.push({
+        id: `${e.Id || e.CreationTime}-${type}`,
+        severity,
+        type,
+        user: e.UserId,
+        file: fileOf(e),
+        path: e.ObjectId || e.SourceRelativeUrl || '',
+        detail,
+        when: e.CreationTime,
+        ip: e.ClientIP || '',
+        managedDevice: e.IsManagedDevice !== false,
+    });
+
+    const downloadsByUser = {};
+
+    for (const entry of auditLogs) {
+        if (isSystemAccount(entry.UserId)) continue;
+        const op = entry.Operation || '';
+
+        // 1. A link scoped to "Anyone" needs no sign-in at all - whoever holds the
+        //    URL has the file, inside the company or not.
+        if (entry.SharingLinkScope === 'Anyone') {
+            add(entry, 'critical', 'Anonymous link',
+                `Link works for anyone who has the URL, with ${entry.Permission || 'unknown'} permission.`);
+        }
+
+        // 2. A guest is an account outside this tenant.
+        if (entry.TargetUserOrGroupType === 'Guest') {
+            add(entry, 'critical', 'External share',
+                `Shared with guest account ${entry.TargetUserOrGroupName || '(unnamed)'}.`);
+        }
+
+        // 3. Files whose names match the sensitive keyword list, leaving the tenant
+        //    or landing on disk somewhere.
+        if (entry.isSensitive && /sharing|anonymouslink|companylink|download/i.test(op)) {
+            add(entry, 'high', 'Sensitive file exposed',
+                `${op} on a file flagged as sensitive by name.`);
+        }
+
+        // 4. Company-wide links are not external, but they widen access well past
+        //    the original permission set.
+        if (entry.SharingLinkScope === 'Organization' && /created/i.test(op)) {
+            add(entry, 'medium', 'Company-wide link',
+                `Link created for the whole organisation with ${entry.Permission || 'unknown'} permission.`);
+        }
+
+        if (/download/i.test(op)) {
+            (downloadsByUser[entry.UserId] ||= []).push(entry);
+        }
+    }
+
+    // 5. Bulk download bursts: the shape of someone taking a copy before leaving.
+    for (const [user, events] of Object.entries(downloadsByUser)) {
+        const sorted = events
+            .filter(e => !Number.isNaN(new Date(e.CreationTime).getTime()))
+            .sort((a, b) => new Date(a.CreationTime) - new Date(b.CreationTime));
+
+        for (let i = 0; i + DOWNLOAD_BURST_COUNT - 1 < sorted.length; i++) {
+            const first = sorted[i];
+            const last = sorted[i + DOWNLOAD_BURST_COUNT - 1];
+            const span = new Date(last.CreationTime) - new Date(first.CreationTime);
+            if (span > DOWNLOAD_BURST_WINDOW_MS) continue;
+
+            add(last, 'high', 'Bulk download',
+                `${DOWNLOAD_BURST_COUNT}+ files downloaded within ${Math.max(1, Math.round(span / 60000))} minute(s).`);
+            break; // one incident per user is enough to investigate
+        }
+    }
+
+    const rank = { critical: 0, high: 1, medium: 2 };
+    incidents.sort((a, b) => rank[a.severity] - rank[b.severity] || new Date(b.when) - new Date(a.when));
+
+    return {
+        summary: {
+            critical: incidents.filter(i => i.severity === 'critical').length,
+            high: incidents.filter(i => i.severity === 'high').length,
+            medium: incidents.filter(i => i.severity === 'medium').length,
+            sensitiveFiles: new Set(auditLogs.filter(e => e.isSensitive).map(fileOf)).size,
+            eventsScanned: auditLogs.length,
+        },
+        incidents: incidents.slice(0, 200),
+    };
+}
+
+app.get('/api/security/data-leak', (req, res) => {
+    try {
+        res.json(detectDataLeaks());
+    } catch (e) {
+        console.error('Data leak scan failed:', e.message);
+        res.status(500).json({ error: 'Data leak scan failed' });
     }
 });
 

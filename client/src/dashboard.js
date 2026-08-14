@@ -1,97 +1,68 @@
 /**
- * LDP LOGISTICS SECURITY DASHBOARD - UTILITIES V2.0
+ * LDP LOGISTICS SECURITY DASHBOARD - UTILITIES
  */
 
 // 1. Live Ticking Clock Utility
 export const getLiveTime = () => {
   const now = new Date();
   return {
-    time: now.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit', 
-      hour12: true 
+    time: now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
     }),
-    date: now.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    date: now.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
     })
   };
 };
 
-// 2. Chart.js Global Standard Configs
-export const chartColors = {
-  severe: '#ff3b3b',
-  major: '#ff8c00',
-  moderate: '#ffb800',
-  minor: '#00d4ff',
-  insignificance: '#2a3a55',
-  completed: '#00e676',
-  inProgress: '#ffb800',
-  pending: '#ff3b3b'
-};
+// 2. Severity classification
+// Audit operations triaged the way a SOC would: destruction first, then exposure,
+// then failed access, then routine work. The last rule matches everything, so an
+// operation we have never seen is reported as Informational rather than dropped
+// from the totals - a breakdown that silently discards rows is worse than none.
+//
+// Two of these were caught against the real feed: "Recycled" is a deletion under
+// another name, and "LoggedIn" never contains the substring "login". Missing them
+// left Critical permanently empty and buried 329 sign-ins in Informational.
+export const SEVERITY_RULES = [
+  { key: 'critical', label: 'Critical', color: 'var(--sev-critical)', test: /delete|recycl|malware|ransom|purge/i },
+  { key: 'high', label: 'High', color: 'var(--sev-high)', test: /sharing|anonymouslink|companylink|addedtogroup|permission|siteadmin|roleassign/i },
+  { key: 'medium', label: 'Medium', color: 'var(--sev-medium)', test: /failed|download|moved|renamed|restore/i },
+  { key: 'low', label: 'Low', color: 'var(--sev-low)', test: /accessed|viewed|modified|uploaded|checkin|checkout|logged|login|signin|preview/i },
+  { key: 'info', label: 'Informational', color: 'var(--sev-info)', test: /.*/ },
+];
 
-export const getDonutConfig = (labels, data, colors, centerText = "") => ({
-  labels,
-  datasets: [{
-    data,
-    backgroundColor: colors,
-    borderColor: '#0d1629',
-    borderWidth: 2,
-    hoverOffset: 4,
-    cutout: '70%'
-  }],
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1a2540',
-        titleColor: '#e2e8f0',
-        bodyColor: '#e2e8f0',
-        borderColor: '#00d4ff',
-        borderWidth: 1,
-        padding: 10,
-        cornerRadius: 4,
-        displayColors: false
-      }
-    },
-    animation: {
-      duration: 1500,
-      easing: 'easeOutQuart'
-    }
-  }
-});
+export const severityOf = (operation = '') =>
+  (SEVERITY_RULES.find(rule => rule.test.test(operation)) || SEVERITY_RULES[SEVERITY_RULES.length - 1]).key;
 
-// 3. Activity Feed Simulation/Processing
-// Returns a set of dummy activities for the demo/live feel
-export const generateActivityFeed = (rawData = []) => {
-  if (rawData.length > 0) {
-    return rawData.slice(0, 20).map(item => ({
-      id: item.Id || Math.random().toString(36).substr(2, 9),
+// Service principals are not people and only add noise to a feed meant to be
+// scanned by a human.
+const isServiceAccount = (user = '') =>
+  /^serviceprincipal_|app@sharepoint|urn:spo|^sharepoint\\/i.test(user);
+
+const FEED_STATUS = { critical: 'alert', high: 'warn', medium: 'warn', low: 'ok', info: 'ok' };
+
+// 3. Activity Feed
+// Returns the most RECENT entries. This used to slice from the front of the
+// array, which is the oldest end of the window - a "live" feed showing the
+// oldest events it knows about. It also used to fall back to invented sample
+// rows when there was no data, so an empty feed looked like a busy one.
+export const generateActivityFeed = (rawData = [], limit = 20) =>
+  rawData
+    .filter(item => !isServiceAccount(item.UserId || ''))
+    .slice()
+    .sort((a, b) => new Date(b.CreationTime) - new Date(a.CreationTime))
+    .slice(0, limit)
+    .map((item, index) => ({
+      id: item.Id || `${item.CreationTime}-${index}`,
       user: item.UserId?.split('@')[0] || 'System',
       action: item.Operation || 'Access',
       timestamp: new Date(item.CreationTime).toLocaleTimeString(),
-      status: item.Operation?.includes('Delete') ? 'alert' : item.Operation?.includes('Share') ? 'warn' : 'ok'
+      status: FEED_STATUS[severityOf(item.Operation)] || 'ok',
     }));
-  }
-  
-  // Fallback / Initial sample data
-  return [
-    { id: 1, user: 'j.doe', action: 'Mass File Download', timestamp: '14:02:11', status: 'alert' },
-    { id: 2, user: 'a.smith', action: 'External Sharing', timestamp: '14:05:44', status: 'warn' },
-    { id: 3, user: 'system', action: 'Backup Completed', timestamp: '14:08:22', status: 'ok' },
-    { id: 4, user: 'r.vaughn', action: 'Login Success', timestamp: '14:10:05', status: 'ok' },
-    { id: 5, user: 'k.chen', action: 'Sensitive Doc Access', timestamp: '14:12:30', status: 'warn' }
-  ];
-};
-
-// 4. Initials Getter for Avatar
-export const getInitials = (name = "User") => {
-  const parts = name.split(' ');
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.substring(0, 2).toUpperCase();
-};

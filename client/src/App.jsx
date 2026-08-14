@@ -1,24 +1,30 @@
 // v1.0.3 - Restored clean structure after sync errors
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database, 
-  User as UserIcon, ShieldAlert, Laptop, Globe, Lock, Shield, Settings, 
-  UserPlus, UserMinus, ShieldCheck, ShieldX, Search, Plus, Trash2, 
-  AlertTriangle, Camera, Clock, ShieldHalf, Bell, Fingerprint
+import {
+  Activity, Users, FileText, Share2, LogIn, LayoutDashboard, Database,
+  User as UserIcon, ShieldAlert, Laptop, Lock, Settings,
+  ShieldCheck, ShieldX, Search, Trash2, AlertTriangle, RefreshCw
 } from 'lucide-react';
-import { 
-  Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend as ChartLegend, 
+import {
+  Chart as ChartJS, Tooltip as ChartTooltip, Legend as ChartLegend,
   CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler
 } from 'chart.js';
-import { Doughnut, Bar as BarChartJS } from 'react-chartjs-2';
-import { ResponsiveSankey } from '@nivo/sankey';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { Bar as BarChartJS, Line as LineChartJS } from 'react-chartjs-2';
 import { useMsal, AuthenticatedTemplate, UnauthenticatedTemplate } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-import { getLiveTime, chartColors, generateActivityFeed } from './dashboard';
+import { getLiveTime, generateActivityFeed, SEVERITY_RULES, severityOf } from './dashboard';
 import './App.css';
 
-ChartJS.register(ArcElement, ChartTooltip, ChartLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler);
+ChartJS.register(ChartTooltip, ChartLegend, CategoryScale, LinearScale, BarElement, Title, PointElement, LineElement, Filler);
+
+// The backend polls Microsoft 365 every 15s, so refreshing faster than that just
+// re-fetches an unchanged payload.
+const REFRESH_MS = 10000;
+
+const formatWhen = (value) => {
+  const at = new Date(value);
+  return Number.isNaN(at.getTime()) ? '—' : at.toLocaleString();
+};
 
 const SystemClock = () => {
     const [timeData, setTimeData] = useState(getLiveTime());
@@ -43,7 +49,7 @@ const LiveActivityFeed = ({ data }) => {
                     <span className="pulse-dot cyan"></span>
                     Live Activity Feed
                 </h3>
-                <span className="nav-badge" style={{ background: 'var(--accent-cyan)', color: '#000' }}>LIVE</span>
+                <span className="nav-badge" style={{ background: 'var(--accent-primary)', color: '#000' }}>LIVE</span>
             </div>
             <div className="feed-scroll">
                 {feed.map(item => (
@@ -51,7 +57,7 @@ const LiveActivityFeed = ({ data }) => {
                         <span className={`pulse-dot ${item.status === 'alert' ? 'red' : item.status === 'warn' ? 'yellow' : 'green'}`}></span>
                         <div className="feed-info">
                             <div className="feed-user-action">
-                                <span style={{ color: 'var(--accent-cyan)' }}>{item.user}</span>
+                                <span style={{ color: 'var(--accent-primary)' }}>{item.user}</span>
                                 <span style={{ color: 'var(--text-muted)', margin: '0 8px', fontWeight: '400' }}>•</span>
                                 <span>{item.action}</span>
                             </div>
@@ -67,6 +73,25 @@ const LiveActivityFeed = ({ data }) => {
     );
 };
 
+// Every panel polls on its own schedule, but an operator who has just changed
+// something wants to see the result now rather than wait out the interval.
+const RefreshButton = ({ onRefresh, busy }) => (
+  <button className="refresh-btn" onClick={onRefresh} disabled={busy} title="Refresh this panel now">
+    <RefreshCw size={13} className={busy ? 'spinning' : ''} />
+    {busy ? 'Syncing' : 'Refresh'}
+  </button>
+);
+
+// Panel title on the left, refresh on the right.
+const PanelHead = ({ icon: Icon, title, onRefresh, busy }) => (
+  <div className="panel-head">
+    <div className="chart-title" style={{ marginBottom: 0 }}>
+      {Icon && <Icon size={18} color="var(--accent-primary)" />} {title}
+    </div>
+    {onRefresh && <RefreshButton onRefresh={onRefresh} busy={busy} />}
+  </div>
+);
+
 const KpiCard = ({ label, value, type, icon: Icon, progress, subtext }) => (
   <div className={`stat-card ${type} fadeIn`}>
     {Icon && <Icon className="stat-icon" />}
@@ -81,123 +106,136 @@ const KpiCard = ({ label, value, type, icon: Icon, progress, subtext }) => (
   </div>
 );
 
-const HeatMapTable = () => {
-  const rows = [
-    { label: 'Severe', type: 'pill-red' },
-    { label: 'Major', type: 'pill-orange' },
-    { label: 'Moderate', type: 'pill-yellow' },
-    { label: 'Minor', type: 'pill-cyan' },
-    { label: 'Insignificance', type: 'pill-gray' }
-  ];
-  const cols = ['Rare', 'Unlikely', 'Moderate', 'Likely', 'Almost certain'];
+// Severity as labelled rows, not a pie. Critical/High/Medium sit on neighbouring
+// red-orange-amber hues that no reader separates reliably, so the name and the
+// count carry the meaning and the bar only shows relative weight.
+const SeverityBreakdown = ({ breakdown, total }) => {
+  if (!total) return <div className="data-empty">No audit events in the current window.</div>;
+  const peak = Math.max(...breakdown.map(s => s.count), 1);
   return (
-    <div className="fadeIn">
-      <table className="custom-table">
-        <thead>
-          <tr>
-            <th style={{ width: '140px' }}>Risk Rating</th>
-            {cols.map(c => <th key={c}>{c}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.label}>
-              <td style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{r.label}</td>
-              {cols.map((c) => (
-                <td key={c}>
-                  <span className={`pill ${r.type}`}>
-                    {Math.floor(Math.random() * 25) + 5}
-                  </span>
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="sev-list">
+      {breakdown.map(s => (
+        <div className="sev-row" key={s.key}>
+          <span className="sev-name">
+            <span className="sev-swatch" style={{ background: s.color }} />
+            {s.label}
+          </span>
+          <div className="sev-track">
+            <div className="sev-fill" style={{ width: `${(s.count / peak) * 100}%`, background: s.color }} />
+          </div>
+          <span className="sev-count">{s.count}</span>
+        </div>
+      ))}
     </div>
   );
 };
 
-const DashboardContent = React.memo(({ data, metrics, entitiesData, chartColors, handleUserClick }) => {
+const OperationsBreakdown = ({ operations }) => {
+  if (!operations.length) return <div className="data-empty">No operations recorded yet.</div>;
+  const peak = Math.max(...operations.map(o => o.count), 1);
+  return (
+    <div className="sev-list">
+      {operations.map(op => (
+        <div className="sev-row" key={op.name}>
+          <span className="sev-name" title={op.name}>
+            <span className="sev-swatch" style={{ background: op.color }} />
+            {op.name}
+          </span>
+          <div className="sev-track">
+            <div className="sev-fill" style={{ width: `${(op.count / peak) * 100}%`, background: op.color }} />
+          </div>
+          <span className="sev-count">{op.count}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const DashboardContent = React.memo(({ data, metrics, severityBreakdown, topOperations, activityTimeline, entitiesData, chartColors, onRefresh, busy }) => {
   return (
     <div className="fadeIn">
+      <div className="panel-head">
+        <p className="panel-caption" style={{ margin: 0 }}>Most recent {metrics.total.toLocaleString()} audit events. Security Pulse scores the full 24-hour retention window, so its counts are larger.</p>
+        <RefreshButton onRefresh={onRefresh} busy={busy} />
+      </div>
       <div className="grid-metrics">
-        <KpiCard label="% Risks >= threshold" value={`${metrics.riskPercent}%`} type="cyan" icon={ShieldAlert} progress={metrics.riskPercent} subtext="Total user risk ratio" />
-        <KpiCard label="# Of risks >= threshold" value={metrics.riskyUsers} type="red" icon={AlertTriangle} subtext="Severe risk entities" />
-        <KpiCard label="Risks analysis progress" value={`${metrics.progress}%`} type="yellow" icon={Activity} progress={metrics.progress} subtext="Current scan status" />
-        <KpiCard label="Response progress" value="52.6%" type="green" icon={ShieldCheck} progress={52.6} subtext="Threat mitigation rate" />
+        <KpiCard label="Events in window" value={metrics.total.toLocaleString()} type="cyan" icon={Database} subtext={`Across ${metrics.users} identities`} />
+        <KpiCard label="Destructive actions" value={metrics.deletions.toLocaleString()} type="red" icon={AlertTriangle} subtext="Deletions and purges" />
+        <KpiCard label="Exposure events" value={metrics.shares.toLocaleString()} type="yellow" icon={Share2} subtext="Sharing and link grants" />
+        <KpiCard label="Failed sign-ins" value={metrics.failedLogins.toLocaleString()} type="green" icon={Lock} subtext="Rejected authentication" />
       </div>
 
       <div className="grid-analysis">
         <div className="chart-panel">
-          <div className="chart-title"><ShieldAlert size={18} color="var(--accent-primary)" /> Risk Rating Breakdown</div>
-          <div style={{ height: '220px', position: 'relative' }}>
-            <Doughnut 
-              data={{
-                labels: ['Severe', 'Major', 'Moderate', 'Minor', 'Insignificance'],
-                datasets: [{
-                  data: [14, 25, 33, 48, 12],
-                  backgroundColor: [chartColors.severe, chartColors.major, chartColors.moderate, chartColors.minor, chartColors.insignificance],
-                  borderColor: 'var(--panel-bg)', borderWidth: 2, cutout: '75%'
-                }]
-              }}
-              options={{ maintainAspectRatio: false, plugins: { legend: { display: false } } }}
-            />
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>132</div>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Risks</div>
-            </div>
+          <div className="chart-title"><ShieldAlert size={18} color="var(--accent-primary)" /> Events by Severity</div>
+          <SeverityBreakdown breakdown={severityBreakdown} total={metrics.total} />
+        </div>
+
+        <div className="chart-panel">
+          <div className="chart-title"><Activity size={18} color="var(--accent-primary)" /> Event Volume, Last 12 Hours</div>
+          <div style={{ height: '240px' }}>
+            {activityTimeline.length ? (
+              <LineChartJS
+                data={{
+                  labels: activityTimeline.map(p => p.hour),
+                  datasets: [{
+                    label: 'Events',
+                    data: activityTimeline.map(p => p.count),
+                    borderColor: chartColors.accent,
+                    backgroundColor: chartColors.accentFill,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: chartColors.accent,
+                  }]
+                }}
+                options={{
+                  maintainAspectRatio: false,
+                  interaction: { mode: 'index', intersect: false },
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    x: { grid: { display: false }, border: { color: chartColors.grid }, ticks: { color: chartColors.text, font: { size: 11 }, maxRotation: 0, autoSkipPadding: 16 } },
+                    y: { beginAtZero: true, grid: { color: chartColors.grid }, border: { display: false }, ticks: { color: chartColors.text, font: { size: 11 }, precision: 0 } }
+                  }
+                }}
+              />
+            ) : <div className="data-empty">Waiting for events.</div>}
           </div>
         </div>
 
         <div className="chart-panel">
-          <div className="chart-title"><Activity size={18} color="var(--accent-primary)" /> Risk Heart Map</div>
-          <HeatMapTable />
-        </div>
-
-        <div className="chart-panel">
-          <div className="chart-title"><ShieldHalf size={18} color="var(--accent-primary)" /> Action Plan Breakdown</div>
-          <div style={{ height: '180px', position: 'relative' }}>
-            <Doughnut 
-              data={{
-                labels: ['Completed', 'In Progress', 'Pending'],
-                datasets: [{
-                  data: [35, 45, 20],
-                  backgroundColor: [chartColors.completed, chartColors.inProgress, chartColors.pending],
-                  borderColor: 'var(--panel-bg)', borderWidth: 2, cutout: '75%'
-                }]
-              }}
-              options={{ maintainAspectRatio: false, plugins: { legend: { display: false } } }}
-            />
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>56%</div>
-            </div>
-          </div>
+          <div className="chart-title"><FileText size={18} color="var(--accent-primary)" /> Top Operations</div>
+          <OperationsBreakdown operations={topOperations} />
         </div>
       </div>
 
       <div className="grid-bottom">
         <div className="chart-panel">
-          <div className="chart-title"><Users size={18} color="var(--accent-primary)" /> Top 5 Risk Entities</div>
+          <div className="chart-title"><Users size={18} color="var(--accent-primary)" /> Most Active Identities</div>
           <div style={{ height: '320px' }}>
-            <BarChartJS 
-              data={{
-                labels: entitiesData.map(e => e.name),
-                datasets: [{
-                  label: 'Risk Count',
-                  data: entitiesData.map(e => e.count),
-                  backgroundColor: chartColors.severe,
-                  borderRadius: 4, barThickness: 24
-                }]
-              }}
-              options={{
-                indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: {
-                  x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'var(--text-muted)' } },
-                  y: { grid: { display: false }, ticks: { color: 'var(--text-primary)', font: { size: 10 }, padding: 10 } }
-                }
-              }}
-            />
+            {entitiesData.length ? (
+              <BarChartJS
+                data={{
+                  labels: entitiesData.map(e => e.name),
+                  datasets: [{
+                    label: 'Events',
+                    data: entitiesData.map(e => e.count),
+                    backgroundColor: chartColors.accent,
+                    borderRadius: 4, barThickness: 20
+                  }]
+                }}
+                options={{
+                  indexAxis: 'y', maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    x: { grid: { color: chartColors.grid }, border: { display: false }, ticks: { color: chartColors.text, precision: 0 } },
+                    y: { grid: { display: false }, border: { display: false }, ticks: { color: chartColors.text, font: { size: 11 }, padding: 8 } }
+                  }
+                }}
+              />
+            ) : <div className="data-empty">No identity activity yet.</div>}
           </div>
         </div>
         <div className="chart-panel">
@@ -207,6 +245,231 @@ const DashboardContent = React.memo(({ data, metrics, entitiesData, chartColors,
     </div>
   );
 });
+
+const RISK_PILL = { Critical: 'pill-red', Moderate: 'pill-yellow', Low: 'pill-green' };
+
+const SecurityPulse = ({ riskStats, onRefresh, busy }) => (
+  <div className="fadeIn">
+    <div className="chart-panel">
+      <PanelHead icon={ShieldAlert} title="User Risk Scoring" onRefresh={onRefresh} busy={busy} />
+      <p className="panel-caption">
+        Scored across every event retained in the last 24 hours. Each signal is capped, so one noisy
+        category cannot by itself push an account to Critical.
+      </p>
+      {riskStats.length === 0 ? (
+        <div className="data-empty">
+          No scored identities yet.<br />
+          Risk is calculated from deletions and sharing activity in the audit feed.
+        </div>
+      ) : (
+        <div className="table-scroll">
+          <table className="custom-table">
+            <thead>
+              <tr>
+                <th>Identity</th>
+                <th>Risk</th>
+                <th>Score</th>
+                <th>Events</th>
+                <th>Files touched</th>
+                <th>Indicators</th>
+              </tr>
+            </thead>
+            <tbody>
+              {riskStats.map(entry => (
+                <tr key={entry.user}>
+                  <td>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{entry.user?.split('@')[0]}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.user}</div>
+                  </td>
+                  <td><span className={`pill ${RISK_PILL[entry.level] || 'pill-gray'}`}>{entry.level}</span></td>
+                  <td className="num" style={{ fontWeight: 700 }}>{entry.score}</td>
+                  <td className="num">{entry.activityCount}</td>
+                  <td className="num">{entry.fileCount}</td>
+                  <td style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                    {entry.flags?.length ? entry.flags.join(' · ') : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const LEAK_PILL = { critical: 'pill-red', high: 'pill-orange', medium: 'pill-yellow' };
+// Mirrors the thresholds in the backend's detectDataLeaks so the explanation on
+// screen cannot drift away from the rule that actually fired.
+const DOWNLOAD_BURST_HINT = '10 or more files inside 10 minutes';
+
+const DataLeak = ({ report, error, onRefresh, busy }) => {
+  const { summary, incidents } = report;
+  return (
+    <div className="fadeIn">
+      <div className="grid-metrics">
+        <KpiCard label="Critical exposure" value={summary.critical} type="red" icon={AlertTriangle} subtext="Reachable outside the tenant" />
+        <KpiCard label="High risk" value={summary.high} type="yellow" icon={ShieldAlert} subtext="Sensitive files and bulk pulls" />
+        <KpiCard label="Company-wide links" value={summary.medium} type="cyan" icon={Share2} subtext="Access widened internally" />
+        <KpiCard label="Sensitive files seen" value={summary.sensitiveFiles} type="green" icon={FileText} subtext="Matched by filename" />
+      </div>
+
+      <div className="chart-panel">
+        <PanelHead icon={ShieldX} title="Data Exfiltration Signals" onRefresh={onRefresh} busy={busy} />
+        <p className="panel-caption">
+          {summary.eventsScanned.toLocaleString()} events scanned from the last 24 hours. Each signal below is
+          an observed audit record, not a prediction: a link scoped to Anyone needs no sign-in, a Guest target is
+          an account outside this tenant, and a bulk download is {' '}
+          {DOWNLOAD_BURST_HINT} — worth a look, not automatically malicious.
+        </p>
+
+        {error ? (
+          <div className="data-empty">{error}</div>
+        ) : incidents.length === 0 ? (
+          <div className="data-empty">No exposure signals in this window.</div>
+        ) : (
+          <div className="table-scroll">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>Severity</th>
+                  <th>Signal</th>
+                  <th>Identity</th>
+                  <th>File</th>
+                  <th>What happened</th>
+                  <th>Device</th>
+                  <th>When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {incidents.map(incident => (
+                  <tr key={incident.id}>
+                    <td><span className={`pill ${LEAK_PILL[incident.severity] || 'pill-gray'}`}>{incident.severity.toUpperCase()}</span></td>
+                    <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{incident.type}</td>
+                    <td>{incident.user?.split('@')[0]}<div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{incident.user}</div></td>
+                    <td style={{ maxWidth: 240, overflowWrap: 'anywhere' }} title={incident.path}>{incident.file}</td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', maxWidth: 280 }}>{incident.detail}</td>
+                    <td>
+                      <span className={`pill ${incident.managedDevice ? 'pill-green' : 'pill-orange'}`}>
+                        {incident.managedDevice ? 'Managed' : 'Unmanaged'}
+                      </span>
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{formatWhen(incident.when)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const DeviceFleet = ({ devices, error, onRefresh, busy }) => {
+  const [filter, setFilter] = useState('all');
+
+  const compliant = devices.filter(d => d.complianceState === 'compliant').length;
+  const nonCompliant = devices.filter(d => d.complianceState === 'noncompliant').length;
+  // Intune also reports states like "unknown" and "inGracePeriod"; counting those
+  // as compliant would flatter the fleet, so they get their own bucket.
+  const otherState = devices.length - compliant - nonCompliant;
+
+  // Devices needing attention sort to the top - a fleet table ordered by whatever
+  // Graph returned makes the operator hunt for the ones that matter.
+  const visible = useMemo(() => {
+    const rank = { noncompliant: 0, unknown: 1, inGracePeriod: 1, compliant: 3 };
+    return devices
+      .filter(d => filter === 'all'
+        || (filter === 'compliant' && d.complianceState === 'compliant')
+        || (filter === 'noncompliant' && d.complianceState === 'noncompliant')
+        || (filter === 'other' && !['compliant', 'noncompliant'].includes(d.complianceState)))
+      .slice()
+      .sort((a, b) => (rank[a.complianceState] ?? 2) - (rank[b.complianceState] ?? 2)
+        || String(a.deviceName).localeCompare(String(b.deviceName)));
+  }, [devices, filter]);
+
+  const FILTERS = [
+    { key: 'all', label: `All (${devices.length})` },
+    { key: 'noncompliant', label: `Not compliant (${nonCompliant})` },
+    { key: 'other', label: `Unknown / grace (${otherState})` },
+    { key: 'compliant', label: `Compliant (${compliant})` },
+  ];
+
+  return (
+    <div className="fadeIn">
+      {devices.length > 0 && (
+        <div className="grid-metrics">
+          <KpiCard label="Managed devices" value={devices.length} type="cyan" icon={Laptop} subtext="Enrolled in Intune" />
+          <KpiCard label="Not compliant" value={nonCompliant} type="red" icon={AlertTriangle} subtext="Failing policy right now" />
+          <KpiCard label="Unknown / grace" value={otherState} type="yellow" icon={ShieldAlert} subtext="Not yet reporting a verdict" />
+          <KpiCard label="Compliant" value={compliant} type="green" icon={ShieldCheck} subtext="Meeting policy" />
+        </div>
+      )}
+
+      <div className="chart-panel">
+        <PanelHead icon={Laptop} title="Corporate Device Fleet" onRefresh={onRefresh} busy={busy} />
+
+        {devices.length > 0 && (
+          <div className="filter-row">
+            {FILTERS.map(f => (
+              <button
+                key={f.key}
+                className={`filter-chip ${filter === f.key ? 'active' : ''}`}
+                onClick={() => setFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {error ? (
+          <div className="data-empty">{error}</div>
+        ) : devices.length === 0 ? (
+          <div className="data-empty">No managed devices returned by Intune.</div>
+        ) : visible.length === 0 ? (
+          <div className="data-empty">No devices in this state.</div>
+        ) : (
+          <div className="table-scroll">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>Device</th>
+                  <th>Assigned to</th>
+                  <th>Platform</th>
+                  <th>Compliance</th>
+                  <th>Last check-in</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map(device => (
+                  <tr key={device.id}>
+                    <td>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{device.deviceName || 'Unnamed device'}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{device.model || '—'}</div>
+                    </td>
+                    <td>
+                      <div>{device.userDisplayName || 'Unassigned'}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{device.userPrincipalName || ''}</div>
+                    </td>
+                    <td>{device.operatingSystem || '—'}</td>
+                    <td>
+                      <span className={`pill ${device.complianceState === 'compliant' ? 'pill-green' : device.complianceState === 'noncompliant' ? 'pill-red' : 'pill-gray'}`}>
+                        {device.complianceState || 'unknown'}
+                      </span>
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{formatWhen(device.lastSyncDateTime)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const AdminPortal = ({ authorizedUsers, fetchAuthList, API_BASE }) => {
   const [newEmail, setNewEmail] = useState('');
@@ -240,18 +503,18 @@ const AdminPortal = ({ authorizedUsers, fetchAuthList, API_BASE }) => {
     <div className="admin-portal-container fadeIn">
       <div className="chart-panel" style={{ maxWidth: '800px', margin: '0 auto', padding: '30px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
-          <ShieldCheck size={32} color="var(--accent-cyan)" />
+          <ShieldCheck size={32} color="var(--accent-primary)" />
           <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Access Control Terminal</h2>
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '40px' }}>
           <input type="email" placeholder="Enter Corporate Email..." value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={{ flex: 1, padding: '12px', background: 'var(--panel-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', color: '#fff' }} />
-          <button onClick={handleAdd} disabled={loading} className="btn-primary" style={{ background: 'var(--accent-cyan)', color: '#000', border: 'none', padding: '0 20px', borderRadius: '8px', fontWeight: '700' }}>Grant Access</button>
+          <button onClick={handleAdd} disabled={loading} className="btn-primary" style={{ background: 'var(--accent-primary)', color: '#000', border: 'none', padding: '0 20px', borderRadius: '8px', fontWeight: '700' }}>Grant Access</button>
         </div>
         <div className="users-auth-list">
           {authorizedUsers.map(email => (
             <div key={email} className="feed-item" style={{ marginBottom: '10px' }}>
               <span>{email}</span>
-              <button onClick={() => handleRemove(email)} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--danger-red)' }}><Trash2 size={18} /></button>
+              <button onClick={() => handleRemove(email)} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'var(--critical)' }}><Trash2 size={18} /></button>
             </div>
           ))}
         </div>
@@ -271,11 +534,11 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [adminStatus, setAdminStatus] = useState({ isSuperAdmin: false, isAuthorized: false });
   const [authError, setAuthError] = useState(null);
+  const [lastSync, setLastSync] = useState(null);
+  const [clockTick, setClockTick] = useState(() => Date.now());
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [searchTerm, setSearchTerm] = useState("");
   const [theme, setTheme] = useState('classic'); // 'classic', 'executive', 'light'
   
   // Dev: Vite proxies /api to localhost:3001. Prod: VITE_API_URL is baked in at
@@ -293,39 +556,76 @@ function App() {
   }, []);
 
   // Theme-aware Chart Colors
-  const activeColors = useMemo(() => {
-    if (theme === 'light') return {
-      severe: '#DC3545',
-      major: '#FD7E14',
-      moderate: '#FFC107',
-      minor: '#3B7DDD',
-      insignificance: '#E9ECEF',
-      completed: '#28A745',
-      inProgress: '#FFC107',
-      pending: '#DC3545'
-    };
-    return {
-      severe: theme === 'executive' ? '#EF4444' : '#ff3b3b',
-      major: theme === 'executive' ? '#F59E0B' : '#ff8c00',
-      moderate: theme === 'executive' ? '#F59E0B' : '#ffb800',
-      minor: theme === 'executive' ? '#3B82F6' : '#00d4ff',
-      insignificance: theme === 'executive' ? '#475569' : '#2a3a55',
-      completed: theme === 'executive' ? '#10B981' : '#00e676',
-      inProgress: theme === 'executive' ? '#F59E0B' : '#ffb800',
-      pending: theme === 'executive' ? '#EF4444' : '#ff3b3b'
-    };
-  }, [theme]);
+  // Chart libraries paint onto a canvas and cannot resolve CSS custom properties,
+  // so the marks need literal values even though the surrounding chrome is themed.
+  const activeColors = useMemo(() => ({
+    accent: theme === 'light' ? '#2a78d6' : theme === 'executive' ? '#4a95e8' : '#3987e5',
+    accentFill: theme === 'light' ? 'rgba(42, 120, 214, 0.12)' : 'rgba(57, 135, 229, 0.16)',
+    grid: theme === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.06)',
+    text: theme === 'light' ? '#52617a' : '#8b98a8',
+  }), [theme]);
 
   const metrics = useMemo(() => {
-    if (!data || data.length === 0) return { total: 0, riskyUsers: 0, riskPercent: 0, progress: 88.8 };
-    const users = [...new Set(data.map(d => d.UserId))];
-    const riskyUsers = users.filter(u => data.filter(d => d.UserId === u && (d.Operation?.includes('Delete') || d.Operation?.includes('Share'))).length > 5).length;
-    return { total: data.length, riskyUsers, riskPercent: ((riskyUsers / users.length) * 100 || 0).toFixed(1), progress: (Math.min(data.length / 500, 100) * 0.9).toFixed(1) };
+    const users = new Set(data.map(d => d.UserId).filter(Boolean));
+    const count = (re) => data.filter(d => re.test(d.Operation || '')).length;
+    return {
+      total: data.length,
+      users: users.size,
+      deletions: count(/delete|purge/i),
+      shares: count(/shar|anonymouslink|companylink/i),
+      failedLogins: data.filter(d => /failed/i.test(d.Operation || '') || d.ResultStatus === 'Failed').length,
+    };
+  }, [data]);
+
+  const severityBreakdown = useMemo(() => {
+    const counts = {};
+    data.forEach(d => {
+      const key = severityOf(d.Operation);
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return SEVERITY_RULES.map(rule => ({ ...rule, count: counts[rule.key] || 0 }));
+  }, [data]);
+
+  const topOperations = useMemo(() => {
+    const counts = {};
+    data.forEach(d => { if (d.Operation) counts[d.Operation] = (counts[d.Operation] || 0) + 1; });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, count]) => ({
+        name,
+        count,
+        color: SEVERITY_RULES.find(r => r.key === severityOf(name))?.color,
+      }));
+  }, [data]);
+
+  // Twelve fixed hourly buckets so the axis stays put between refreshes; empty
+  // hours are kept at zero rather than skipped, otherwise a quiet night reads as
+  // a continuous busy line.
+  const activityTimeline = useMemo(() => {
+    if (!data.length) return [];
+    const buckets = new Map();
+    const cursor = new Date();
+    cursor.setMinutes(0, 0, 0);
+    for (let i = 11; i >= 0; i--) buckets.set(cursor.getTime() - i * 3600000, 0);
+
+    data.forEach(entry => {
+      const at = new Date(entry.CreationTime);
+      if (Number.isNaN(at.getTime())) return;
+      at.setMinutes(0, 0, 0);
+      const key = at.getTime();
+      if (buckets.has(key)) buckets.set(key, buckets.get(key) + 1);
+    });
+
+    return [...buckets].map(([time, count]) => ({
+      hour: new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      count,
+    }));
   }, [data]);
 
   const entitiesData = useMemo(() => {
     const userCounts = {};
-    data.forEach(d => { userCounts[d.UserId] = (userCounts[d.UserId] || 0) + 1; });
+    data.forEach(d => { if (d.UserId) userCounts[d.UserId] = (userCounts[d.UserId] || 0) + 1; });
     return Object.entries(userCounts).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([user, count]) => ({ name: user.split('@')[0], count }));
   }, [data]);
 
@@ -358,40 +658,55 @@ function App() {
   const fetchData = async () => {
     try {
       const response = await fetch(`${API_BASE}/api/audit-logs`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
-      if (!response.ok) throw new Error('API Sync Pending');
+      if (!response.ok) throw new Error(`API responded ${response.status}`);
       setData(await response.json());
+      setLastSync(Date.now());
       setError(null);
-    } catch (err) { setError("Waiting for M365 Backend Sync..."); } finally { setLoading(false); }
+    } catch (err) { setError(err.message); }
   };
 
-  const [webActivity, setWebActivity] = useState([]);
-  const [activeCalls, setActiveCalls] = useState([]);
-  const [shadowLogs, setShadowLogs] = useState([]);
   const [riskStats, setRiskStats] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [devicesError, setDevicesError] = useState(null);
+  const [leakReport, setLeakReport] = useState({ summary: { critical: 0, high: 0, medium: 0, sensitiveFiles: 0, eventsScanned: 0 }, incidents: [] });
+  const [leakError, setLeakError] = useState(null);
+  const [refreshing, setRefreshing] = useState(null);
 
-  const fetchWebActivity = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/security/web-activity`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
-      if (res.ok) setWebActivity(await res.json());
-    } catch (e) {}
+  // Wraps a fetch so the panel's own button can show it working. Keyed by panel
+  // so one refresh does not spin every other button on screen.
+  const manualRefresh = (key, ...fetchers) => async () => {
+    setRefreshing(key);
+    try { await Promise.all(fetchers.map(fn => fn())); } finally { setRefreshing(null); }
   };
 
-  const fetchActiveCalls = async () => {
+  const fetchRiskStats = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/security/active-calls`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
-      if (res.ok) setActiveCalls(await res.json());
-    } catch (e) {}
+      const res = await fetch(`${API_BASE}/api/security/risk-stats`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
+      if (res.ok) setRiskStats(await res.json());
+    } catch (e) { console.error('Risk stats fetch failed', e); }
   };
 
-  const fetchSecurityInsights = async () => {
+  const fetchDataLeak = async () => {
     try {
-      const [shadow, risk] = await Promise.all([
-        fetch(`${API_BASE}/api/security/shadow-it`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } }),
-        fetch(`${API_BASE}/api/security/risk-stats`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } })
-      ]);
-      if (shadow.ok) setShadowLogs(await shadow.json());
-      if (risk.ok) setRiskStats(await risk.json());
-    } catch (e) {}
+      const res = await fetch(`${API_BASE}/api/security/data-leak`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
+      if (!res.ok) throw new Error(`Scan responded ${res.status}`);
+      setLeakReport(await res.json());
+      setLeakError(null);
+    } catch (e) { setLeakError(e.message); }
+  };
+
+  const fetchDevices = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/devices/all`, { headers: { 'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$' } });
+      // Intune returns an error body rather than an empty list when the tenant has
+      // no managed devices, so show that message instead of an empty table.
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Device API responded ${res.status}`);
+      }
+      setDevices(await res.json());
+      setDevicesError(null);
+    } catch (e) { setDevicesError(e.message); }
   };
 
   const userIntelligenceSummary = useMemo(() => {
@@ -418,22 +733,42 @@ function App() {
     } 
   }, [accounts]);
 
+  // activeTab is deliberately NOT a dependency here. It used to be, which tore the
+  // timer down and restarted the countdown on every tab click - so someone moving
+  // around the dashboard could sit indefinitely without a single refresh landing.
   useEffect(() => {
-    if (accounts.length > 0 && adminStatus.isAuthorized) {
-      fetchData();
-      if (activeTab === 'web') fetchWebActivity();
-      if (activeTab === 'comms') fetchActiveCalls();
-      if (activeTab === 'behavior' || activeTab === 'shadow') fetchSecurityInsights();
+    if (!accounts.length || !adminStatus.isAuthorized) return;
+    // The leak scan runs on data the backend already holds - no Graph call - so it
+    // rides the main interval. That keeps the sidebar's critical badge live
+    // whichever tab is open; a leak you only find by clicking the tab is a leak
+    // nobody finds.
+    const poll = () => { fetchData(); fetchDataLeak(); };
+    poll();
+    const interval = setInterval(poll, REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [accounts.length, adminStatus.isAuthorized]);
 
-      const interval = setInterval(() => {
-        fetchData();
-        if (activeTab === 'web') fetchWebActivity();
-        if (activeTab === 'comms') fetchActiveCalls();
-        if (activeTab === 'behavior' || activeTab === 'shadow') fetchSecurityInsights();
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [accounts, activeTab, adminStatus.isAuthorized]);
+  // Tab-scoped data hits Microsoft Graph on every call, so it refreshes when its
+  // tab is opened and then at a slower cadence than the audit feed.
+  useEffect(() => {
+    if (!accounts.length || !adminStatus.isAuthorized) return;
+    const load = () => {
+      if (activeTab === 'behavior') fetchRiskStats();
+      if (activeTab === 'devices') fetchDevices();
+    };
+    load();
+    const interval = setInterval(load, REFRESH_MS * 3);
+    return () => clearInterval(interval);
+  }, [accounts.length, adminStatus.isAuthorized, activeTab]);
+
+  // Drives the "synced Ns ago" readout so it keeps counting between fetches.
+  useEffect(() => {
+    const tick = setInterval(() => setClockTick(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  const syncAge = lastSync ? Math.round((clockTick - lastSync) / 1000) : null;
+  const syncState = error ? 'down' : syncAge !== null && syncAge > (REFRESH_MS / 1000) * 3 ? 'stale' : 'ok';
 
   const handleLogin = () => instance.loginRedirect(loginRequest);
 
@@ -474,11 +809,13 @@ function App() {
                 <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={18} /> Overview</button>
                 <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}><Users size={18} /> User Intel</button>
                 <button className={`nav-item ${activeTab === 'behavior' ? 'active' : ''}`} onClick={() => setActiveTab('behavior')}><ShieldAlert size={18} /> Security Pulse</button>
-                
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem', fontWeight: '800', padding: '0 16px', marginTop: '20px', marginBottom: '8px', opacity: 0.5 }}>MONITORING</div>
-                <button className={`nav-item ${activeTab === 'comms' ? 'active' : ''}`} onClick={() => setActiveTab('comms')}><Activity size={18} /> Comms Intel</button>
-                <button className={`nav-item ${activeTab === 'web' ? 'active' : ''}`} onClick={() => setActiveTab('web')}><Globe size={18} /> Web Activity</button>
-                <button className={`nav-item ${activeTab === 'shadow' ? 'active' : ''}`} onClick={() => setActiveTab('shadow')}><FileText size={18} /> Shadow IT</button>
+                <button className={`nav-item ${activeTab === 'devices' ? 'active' : ''}`} onClick={() => setActiveTab('devices')}><Laptop size={18} /> Devices</button>
+                <button className={`nav-item ${activeTab === 'leak' ? 'active' : ''}`} onClick={() => setActiveTab('leak')}>
+                  <ShieldX size={18} /> Data Leak
+                  {leakReport.summary.critical > 0 && (
+                    <span className="nav-badge nav-badge-alert">{leakReport.summary.critical}</span>
+                  )}
+                </button>
 
                 {adminStatus.isSuperAdmin && (
                   <button className={`nav-item ${activeTab === 'admin' ? 'active' : ''}`} onClick={() => setActiveTab('admin')} style={{ marginTop: 'auto', color: 'var(--warning)' }}><Settings size={18} /> Admin Terminal</button>
@@ -488,9 +825,16 @@ function App() {
 
             <main className="main-content">
               <div className="top-header">
-                <div className="system-status">
-                  <span className="pulse-dot green"></span>
-                  <span style={{ color: 'var(--success)', fontWeight: '800', fontSize: '0.7rem' }}>SECURE CONNECTION ACTIVE</span>
+                {/* Reports what the last fetch actually did. The old header claimed
+                    SECURE CONNECTION ACTIVE unconditionally, so a dead API and a
+                    healthy one looked identical. */}
+                <div className={`sync-status ${syncState}`}>
+                  <span className={`pulse-dot ${syncState === 'ok' ? 'green' : syncState === 'stale' ? 'yellow' : 'red'}`}></span>
+                  {syncState === 'down'
+                    ? `SYNC FAILED — ${error}`
+                    : syncAge === null
+                      ? 'CONNECTING…'
+                      : `LIVE — SYNCED ${syncAge}s AGO`}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                   {/* Triple Theme Toggle */}
@@ -507,12 +851,27 @@ function App() {
               </div>
 
               <div className="dashboard-content">
-                {activeTab === 'dashboard' && <DashboardContent data={data} metrics={metrics} entitiesData={entitiesData} chartColors={activeColors} handleUserClick={(e) => setActiveTab('users')} />}
+                {activeTab === 'dashboard' && (
+                  <DashboardContent
+                    data={data}
+                    metrics={metrics}
+                    severityBreakdown={severityBreakdown}
+                    topOperations={topOperations}
+                    activityTimeline={activityTimeline}
+                    entitiesData={entitiesData}
+                    chartColors={activeColors}
+                    onRefresh={manualRefresh('dashboard', fetchData, fetchDataLeak)}
+                    busy={refreshing === 'dashboard'}
+                  />
+                )}
                 
                 {activeTab === 'users' && (
                   <div className="fadeIn">
                     <div className="chart-panel">
-                      <div className="chart-title">Employee Intelligence Overview</div>
+                      <div className="panel-head">
+                        <div className="chart-title" style={{ marginBottom: 0 }}>Employee Intelligence Overview</div>
+                        <RefreshButton onRefresh={manualRefresh('users', fetchData, fetchAuthList)} busy={refreshing === 'users'} />
+                      </div>
                       <table className="custom-table">
                         <thead>
                           <tr>
@@ -583,13 +942,11 @@ function App() {
 
                 {activeTab === 'admin' && <AdminPortal authorizedUsers={authorizedUsers} fetchAuthList={fetchAuthList} API_BASE={API_BASE} />}
                 
-                {['behavior', 'comms', 'web', 'shadow'].includes(activeTab) && (
-                  <div className="fadeIn" style={{ textAlign: 'center', padding: '100px' }}>
-                    <Activity size={48} color="var(--accent-primary)" />
-                    <h2 style={{ marginTop: '20px' }}>{activeTab.toUpperCase()} TERMINAL ACTIVE</h2>
-                    <p style={{ color: 'var(--text-muted)' }}>Real-time telemetry and forensic logs are being streamed to this terminal.</p>
-                  </div>
-                )}
+                {activeTab === 'behavior' && <SecurityPulse riskStats={riskStats} onRefresh={manualRefresh("behavior", fetchRiskStats)} busy={refreshing === "behavior"} />}
+
+                {activeTab === 'devices' && <DeviceFleet devices={devices} error={devicesError} onRefresh={manualRefresh("devices", fetchDevices)} busy={refreshing === "devices"} />}
+
+                {activeTab === 'leak' && <DataLeak report={leakReport} error={leakError} onRefresh={manualRefresh("leak", fetchDataLeak)} busy={refreshing === "leak"} />}
               </div>
             </main>
           </>
