@@ -13,6 +13,11 @@ services:
       - traefik_public
     labels:
       - "traefik.enable=true"
+      # This service sits on two networks, so Traefik cannot guess which address
+      # to route to: it skips the container and no router is created at all,
+      # which surfaces as a 404 rather than a 502. The frontend needs no such
+      # label because it is only attached to traefik_public.
+      - "traefik.docker.network=traefik_public"
       # HTTP Router (Redirect to HTTPS)
       - "traefik.http.routers.backend-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`)"
       - "traefik.http.routers.backend-${PROJECT_NAME}.entrypoints=web"

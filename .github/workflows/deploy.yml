@@ -118,3 +118,20 @@ jobs:
           done
           echo "::error::Production still serves a stale build. The containers on the server were not replaced - check that BACKEND_IMAGE/FRONTEND_IMAGE in .env.prod match the tags this workflow pushes."
           exit 1
+
+      # The API silently fell out of Traefik's routing table once and nobody
+      # noticed, because a dashboard with no data looks the same as a slow one.
+      - name: Verify the API is routed
+        run: |
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+            https://apildpm365.ldplogistics.com/api/audit-logs || true)
+          echo "GET /api/audit-logs without a key -> $CODE"
+          # 403 is the healthy answer: the request reached Express and its
+          # dashboard-key middleware rejected it. 404 means Traefik has no
+          # route to the backend container at all.
+          if [ "$CODE" = "403" ]; then
+            echo "API is reachable."
+          else
+            echo "::error::Expected 403 from the API, got $CODE. Traefik is not routing to the backend container."
+            exit 1
+          fi
