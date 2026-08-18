@@ -75,9 +75,27 @@ initAuthorizedUsers();
 
 // SENSITIVE CONTENT KEYWORDS
 const SENSITIVE_KEYWORDS = ['salary', 'invoice', 'password', 'confidential', 'secret', 'contract', 'finance', 'payment', 'tax', 'bonus'];
+// Match each keyword as a whole word, not a bare substring. The old includes()
+// fired on any file whose name merely contained the letters: "tax" flagged
+// "taxonomy", "secret" flagged "secretary", "contract" flagged "contractor",
+// "finance" flagged "refinance" - drowning the panel in false positives, which
+// is the opposite of useful.
+//
+// A plain \b won't do here: underscore counts as a word character, so \bsalary\b
+// never fires on "Q1_salary.xlsx". Instead the keyword must not be flanked by
+// LETTERS - digits, underscores, dots and slashes are all fine. That keeps the
+// real hits (Q1_salary, payment_details, tax2024) and an optional trailing "s"
+// covers plurals (invoices, payments, contracts), while still rejecting the
+// longer words above.
+const SENSITIVE_RE = new RegExp(`(?<![a-z])(${SENSITIVE_KEYWORDS.join('|')})s?(?![a-z])`, 'i');
 function checkSensitivity(path) {
     if (!path) return false;
-    return SENSITIVE_KEYWORDS.some(kw => path.toLowerCase().includes(kw));
+    // ObjectId/URLs arrive percent-encoded and often camelCased; decode and split
+    // "SalaryReview" into "Salary Review" so the letter guard sees the seam.
+    let text = String(path);
+    try { text = decodeURIComponent(text); } catch { /* leave as-is if malformed */ }
+    text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
+    return SENSITIVE_RE.test(text);
 }
 
 // EMAIL ALERT SYSTEM 
@@ -327,6 +345,57 @@ app.use('/api', (req, res, next) => {
         res.status(403).json({ error: "Access Denied: Secure Terminal Only" });
     }
 });
+
+// PRIVILEGED OPERATIONS: real identity, not the shared key
+//
+// The dashboard key above is a gate, not authentication - it ships inside the
+// public JS bundle, so anyone who reads it can call this API with curl. That is
+// survivable for read-only views. It is not survivable for rebooting machines:
+// one leaked bundle would let a stranger restart the entire fleet. So routes
+// that act on hardware additionally require the caller's Microsoft ID token,
+// verified against Entra's published signing keys, and accept only the super
+// admins named above.
+const SPA_CLIENT_ID = process.env.SPA_CLIENT_ID || '249138ab-21cd-4538-bf4a-7cf81c3594a8';
+const ENTRA_ISSUER = `https://login.microsoftonline.com/${TENANT_ID}/v2.0`;
+
+// jose is ESM-only and this file is CommonJS on Node 20, where require() of an
+// ESM package is not dependable. Import it once, lazily, and reuse the promise.
+// createRemoteJWKSet caches Entra's signing keys internally and refetches only
+// when they rotate, so verification costs no network hop per request.
+let entraVerifier = null;
+const getEntraVerifier = () => (entraVerifier ||= import('jose').then(({ createRemoteJWKSet, jwtVerify }) => {
+    const keys = createRemoteJWKSet(new URL(`https://login.microsoftonline.com/${TENANT_ID}/discovery/v2.0/keys`));
+    return (token) => jwtVerify(token, keys, { issuer: ENTRA_ISSUER, audience: SPA_CLIENT_ID });
+}));
+
+async function requireSuperAdmin(req, res, next) {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : null;
+    if (!token) {
+        console.warn(`Blocked unsigned privileged call to: ${req.path} from IP: ${req.ip}`);
+        return res.status(401).json({ error: 'Sign in again - this action needs a verified Microsoft session.' });
+    }
+
+    let payload;
+    try {
+        // Verifies signature, issuer, audience and expiry. A token minted for a
+        // different app or tenant fails here, as does one the caller forged.
+        ({ payload } = await (await getEntraVerifier())(token));
+        if (payload.tid !== TENANT_ID) throw new Error('token issued by a foreign tenant');
+    } catch (e) {
+        console.warn(`Rejected privileged call to ${req.path} from IP ${req.ip}: ${e.message}`);
+        return res.status(401).json({ error: 'Your session could not be verified. Sign out and sign in again.' });
+    }
+
+    const email = String(payload.preferred_username || payload.upn || '').toLowerCase();
+    if (!SUPER_ADMINS.includes(email)) {
+        console.warn(`Denied privileged call to ${req.path} by ${email || 'unidentified account'}`);
+        return res.status(403).json({ error: 'Restricted to the help desk administrators.' });
+    }
+
+    req.callerEmail = email;
+    next();
+}
 
 // ADMIN API: User Authorization Management
 app.get('/api/admin/authorized-users', (req, res) => {
@@ -767,7 +836,17 @@ app.get('/api/security/risk-stats', (req, res) => {
 const DOWNLOAD_BURST_COUNT = 10;      // files...
 const DOWNLOAD_BURST_WINDOW_MS = 10 * 60 * 1000;  // ...within this window
 
+// Every open dashboard polls this every 10s, and the scan re-reads and re-parses
+// the whole audit file each time. The file only changes when the collector writes
+// new events, so key a cache on its modification time: between writes, every
+// caller gets the same computed result for free.
+let leakCache = { mtimeMs: null, result: null };
+
 function detectDataLeaks() {
+    let mtimeMs = null;
+    try { mtimeMs = fs.statSync(OUTPUT_FILE).mtimeMs; } catch { /* file not created yet */ }
+    if (leakCache.result && leakCache.mtimeMs === mtimeMs) return leakCache.result;
+
     const auditLogs = fs.existsSync(OUTPUT_FILE) ? JSON.parse(fs.readFileSync(OUTPUT_FILE)) : [];
     const incidents = [];
 
@@ -844,16 +923,24 @@ function detectDataLeaks() {
     const rank = { critical: 0, high: 1, medium: 2 };
     incidents.sort((a, b) => rank[a.severity] - rank[b.severity] || new Date(b.when) - new Date(a.when));
 
-    return {
+    const LIMIT = 200;
+    const result = {
         summary: {
             critical: incidents.filter(i => i.severity === 'critical').length,
             high: incidents.filter(i => i.severity === 'high').length,
             medium: incidents.filter(i => i.severity === 'medium').length,
             sensitiveFiles: new Set(auditLogs.filter(e => e.isSensitive).map(fileOf)).size,
             eventsScanned: auditLogs.length,
+            // The table caps its rows; report the real total so the operator knows
+            // when what they are looking at is only the top slice, not everything.
+            totalIncidents: incidents.length,
+            shown: Math.min(incidents.length, LIMIT),
         },
-        incidents: incidents.slice(0, 200),
+        incidents: incidents.slice(0, LIMIT),
     };
+
+    leakCache = { mtimeMs, result };
+    return result;
 }
 
 // BROWSING USAGE
@@ -949,10 +1036,13 @@ app.get('/api/security/data-leak', (req, res) => {
 });
 
 // NEW: Trigger Remote Reboot
-app.post('/api/device/:deviceId/reboot', async (req, res) => {
+app.post('/api/device/:deviceId/reboot', requireSuperAdmin, async (req, res) => {
     try {
         const deviceId = req.params.deviceId;
-        
+        // Restarting somebody's machine is the kind of action that gets asked
+        // about afterwards, so name who ordered it.
+        console.log(`[REBOOT] ${req.callerEmail} requested restart of device ${deviceId}`);
+
         // 1. Get Graph Token
         const params = new URLSearchParams();
         params.append('client_id', CLIENT_ID);

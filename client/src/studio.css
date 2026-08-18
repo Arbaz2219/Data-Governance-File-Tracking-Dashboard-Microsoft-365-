@@ -441,6 +441,10 @@ palette stays reachable behind .theme-dark for a wall display.
 .studio .refresh-btn { border-color: var(--hairline); color: var(--ink-soft); }
 .studio .refresh-btn:hover:not(:disabled) { color: var(--ink); border-color: #d4d4d8; }
 
+.studio .row-action { border-color: var(--hairline); }
+.studio .row-action.danger { border-color: #f0cfcd; color: #a72c2b; }
+.studio .row-action.danger:hover:not(:disabled) { background: #fdeaea; border-color: #e0a9a6; }
+
 .studio .filter-chip { border-color: var(--hairline); color: var(--ink-soft); }
 .studio .filter-chip.active {
   background: var(--rail-bg);

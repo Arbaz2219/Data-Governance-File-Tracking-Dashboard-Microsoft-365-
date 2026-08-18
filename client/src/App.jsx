@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Activity, Users, FileText, Share2, LayoutDashboard, Database,
   ShieldAlert, Laptop, Lock, Settings,
-  ShieldCheck, ShieldX, Search, Trash2, AlertTriangle, RefreshCw, Globe
+  ShieldCheck, ShieldX, Search, Trash2, AlertTriangle, RefreshCw, Globe, Power
 } from 'lucide-react';
 import {
   Chart as ChartJS, Tooltip as ChartTooltip, Legend as ChartLegend,
@@ -324,6 +324,30 @@ const DOWNLOAD_BURST_HINT = '10 or more files inside 10 minutes';
 
 const DataLeak = ({ report, error, onRefresh, busy }) => {
   const { summary, incidents } = report;
+  const [sev, setSev] = useState('all');
+  const [query, setQuery] = useState('');
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return incidents.filter(i =>
+      (sev === 'all' || i.severity === sev)
+      && (!needle
+        || (i.user || '').toLowerCase().includes(needle)
+        || (i.file || '').toLowerCase().includes(needle)
+        || (i.type || '').toLowerCase().includes(needle)));
+  }, [incidents, sev, query]);
+
+  // Severity counts come from the summary, which is computed over the whole
+  // dataset - so a chip can legitimately read higher than the capped table.
+  const FILTERS = [
+    { key: 'all', label: `All (${summary.totalIncidents ?? incidents.length})` },
+    { key: 'critical', label: `Critical (${summary.critical})` },
+    { key: 'high', label: `High (${summary.high})` },
+    { key: 'medium', label: `Company-wide (${summary.medium})` },
+  ];
+
+  const truncated = (summary.totalIncidents ?? 0) > incidents.length;
+
   return (
     <div className="fadeIn">
       <div className="tile-row">
@@ -342,10 +366,40 @@ const DataLeak = ({ report, error, onRefresh, busy }) => {
           {DOWNLOAD_BURST_HINT} — worth a look, not automatically malicious.
         </p>
 
+        {incidents.length > 0 && (
+          <div className="filter-row">
+            {FILTERS.map(f => (
+              <button
+                key={f.key}
+                className={`filter-chip ${sev === f.key ? 'active' : ''}`}
+                onClick={() => setSev(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+            <input
+              className="leak-search"
+              type="search"
+              placeholder="Filter by user, file or signal…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        )}
+
+        {truncated && (
+          <p className="leak-truncation">
+            Showing the top {incidents.length} of {summary.totalIncidents} signals, most severe first.
+            Narrow the window or resolve the criticals to see the rest.
+          </p>
+        )}
+
         {error ? (
           <div className="data-empty">{error}</div>
         ) : incidents.length === 0 ? (
           <div className="data-empty">No exposure signals in this window.</div>
+        ) : visible.length === 0 ? (
+          <div className="data-empty">No signals match this filter.</div>
         ) : (
           <div className="table-scroll">
             <table className="custom-table">
@@ -361,7 +415,7 @@ const DataLeak = ({ report, error, onRefresh, busy }) => {
                 </tr>
               </thead>
               <tbody>
-                {incidents.map(incident => (
+                {visible.map(incident => (
                   <tr key={incident.id}>
                     <td><span className={`pill ${LEAK_PILL[incident.severity] || 'pill-gray'}`}>{incident.severity.toUpperCase()}</span></td>
                     <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{incident.type}</td>
@@ -476,8 +530,46 @@ const WebUsage = ({ report, error, onRefresh, busy }) => {
   );
 };
 
-const DeviceFleet = ({ devices, error, onRefresh, busy }) => {
+const DeviceFleet = ({ devices, error, onRefresh, busy, API_BASE, canReboot, getIdToken }) => {
   const [filter, setFilter] = useState('all');
+  // A reboot lands on somebody's actual machine, so each row tracks its own
+  // in-flight state - one shared flag would grey out the whole column and leave
+  // the operator unsure which device the command went to.
+  const [rebooting, setRebooting] = useState(null);
+  const [rebootNote, setRebootNote] = useState(null);
+
+  const handleReboot = async (device) => {
+    const name = device.deviceName || 'this device';
+    const owner = device.userDisplayName ? ` (${device.userDisplayName})` : '';
+    if (!window.confirm(
+      `Restart ${name}${owner} now?\n\n`
+      + `Intune delivers the command on the device's next check-in. `
+      + `Unsaved work on that machine will be lost.`
+    )) return;
+
+    setRebooting(device.id);
+    setRebootNote(null);
+    try {
+      // The backend verifies this token against Entra before it will touch any
+      // hardware, so it has to be a live one from MSAL - not the copy cached on
+      // the account object, which can outlive its expiry.
+      const idToken = await getIdToken();
+      const res = await fetch(`${API_BASE}/api/device/${device.id}/reboot`, {
+        method: 'POST',
+        headers: {
+          'X-Dashboard-Key': 'LDP_SECURE_9821_!@#$',
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Reboot API responded ${res.status}`);
+      setRebootNote({ ok: true, text: `Restart command queued for ${name}. It runs on the next Intune check-in.` });
+    } catch (e) {
+      setRebootNote({ ok: false, text: `${name}: ${e.message}` });
+    } finally {
+      setRebooting(null);
+    }
+  };
 
   const compliant = devices.filter(d => d.complianceState === 'compliant').length;
   const nonCompliant = devices.filter(d => d.complianceState === 'noncompliant').length;
@@ -534,6 +626,13 @@ const DeviceFleet = ({ devices, error, onRefresh, busy }) => {
           </div>
         )}
 
+        {rebootNote && (
+          <div className={`reboot-note ${rebootNote.ok ? 'ok' : 'bad'}`}>
+            <span>{rebootNote.text}</span>
+            <button onClick={() => setRebootNote(null)} aria-label="Dismiss">×</button>
+          </div>
+        )}
+
         {error ? (
           <div className="data-empty">{error}</div>
         ) : devices.length === 0 ? (
@@ -550,6 +649,7 @@ const DeviceFleet = ({ devices, error, onRefresh, busy }) => {
                   <th>Platform</th>
                   <th>Compliance</th>
                   <th>Last check-in</th>
+                  {canReboot && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -570,6 +670,18 @@ const DeviceFleet = ({ devices, error, onRefresh, busy }) => {
                       </span>
                     </td>
                     <td style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{formatWhen(device.lastSyncDateTime)}</td>
+                    {canReboot && <td>
+                      <button
+                        className="row-action danger"
+                        onClick={() => handleReboot(device)}
+                        disabled={rebooting !== null || !device.id}
+                        title={device.id ? `Send a restart command to ${device.deviceName || 'this device'}` : 'Intune returned no device id'}
+                      >
+                        {rebooting === device.id
+                          ? <><RefreshCw size={12} className="spinning" /> Sending…</>
+                          : <><Power size={12} /> Restart</>}
+                      </button>
+                    </td>}
                   </tr>
                 ))}
               </tbody>
@@ -746,6 +858,21 @@ function App() {
     return Object.entries(userCounts).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([user, count]) => ({ name: user.split('@')[0], count }));
   }, [data]);
 
+  // Privileged endpoints verify the caller's Microsoft identity server-side, so
+  // they need a live ID token. MSAL renews it silently; if the session has aged
+  // out past silent renewal, a popup is the only way back without losing the page.
+  const getIdToken = async () => {
+    const account = accounts[0];
+    if (!account) throw new Error('No signed-in account');
+    try {
+      const result = await instance.acquireTokenSilent({ ...loginRequest, account });
+      return result.idToken;
+    } catch {
+      const result = await instance.acquireTokenPopup({ ...loginRequest, account });
+      return result.idToken;
+    }
+  };
+
   const fetchAuthList = async () => {
     const email = accounts[0]?.username?.toLowerCase();
     try {
@@ -785,7 +912,7 @@ function App() {
   const [riskStats, setRiskStats] = useState([]);
   const [devices, setDevices] = useState([]);
   const [devicesError, setDevicesError] = useState(null);
-  const [leakReport, setLeakReport] = useState({ summary: { critical: 0, high: 0, medium: 0, sensitiveFiles: 0, eventsScanned: 0 }, incidents: [] });
+  const [leakReport, setLeakReport] = useState({ summary: { critical: 0, high: 0, medium: 0, sensitiveFiles: 0, eventsScanned: 0, totalIncidents: 0, shown: 0 }, incidents: [] });
   const [leakError, setLeakError] = useState(null);
   const [webReport, setWebReport] = useState({ available: false, reason: null, totals: { visits: 0, users: 0, sites: 0, flagged: 0 }, users: [], sites: [] });
   const [webError, setWebError] = useState(null);
@@ -1096,7 +1223,7 @@ function App() {
                 
                 {activeTab === 'behavior' && <SecurityPulse riskStats={riskStats} onRefresh={manualRefresh("behavior", fetchRiskStats)} busy={refreshing === "behavior"} />}
 
-                {activeTab === 'devices' && <DeviceFleet devices={devices} error={devicesError} onRefresh={manualRefresh("devices", fetchDevices)} busy={refreshing === "devices"} />}
+                {activeTab === 'devices' && <DeviceFleet devices={devices} error={devicesError} onRefresh={manualRefresh("devices", fetchDevices)} busy={refreshing === "devices"} API_BASE={API_BASE} canReboot={adminStatus.isSuperAdmin} getIdToken={getIdToken} />}
 
                 {activeTab === 'leak' && <DataLeak report={leakReport} error={leakError} onRefresh={manualRefresh("leak", fetchDataLeak)} busy={refreshing === "leak"} />}
 
